@@ -1,0 +1,2 @@
+# mongox
+MongoDB without boilerplate
