@@ -22,668 +22,668 @@ var (
 
 // Mongo errors from codes
 var (
-	InternalError                                               = errors.New("InternalError, code 1")
-	BadValue                                                    = errors.New("BadValue, code 2")
-	NoSuchKey                                                   = errors.New("NoSuchKey, code 4")
-	GraphContainsCycle                                          = errors.New("GraphContainsCycle, code 5")
-	HostUnreachable                                             = errors.New("HostUnreachable, code 6")
-	HostNotFound                                                = errors.New("HostNotFound, code 7")
-	UnknownError                                                = errors.New("UnknownError, code 8")
-	FailedToParse                                               = errors.New("FailedToParse, code 9")
-	CannotMutateObject                                          = errors.New("CannotMutateObject, code 10")
-	UserNotFound                                                = errors.New("UserNotFound, code 11")
-	UnsupportedFormat                                           = errors.New("UnsupportedFormat, code 12")
-	Unauthorized                                                = errors.New("Unauthorized, code 13")
-	TypeMismatch                                                = errors.New("TypeMismatch, code 14")
-	Overflow                                                    = errors.New("Overflow, code 15")
-	InvalidLength                                               = errors.New("InvalidLength, code 16")
-	ProtocolError                                               = errors.New("ProtocolError, code 17")
-	AuthenticationFailed                                        = errors.New("AuthenticationFailed, code 18")
-	CannotReuseObject                                           = errors.New("CannotReuseObject, code 19")
-	IllegalOperation                                            = errors.New("IllegalOperation, code 20")
-	EmptyArrayOperation                                         = errors.New("EmptyArrayOperation, code 21")
-	InvalidBSON                                                 = errors.New("InvalidBSON, code 22")
-	AlreadyInitialized                                          = errors.New("AlreadyInitialized, code 23")
-	LockTimeout                                                 = errors.New("LockTimeout, code 24")
-	RemoteValidationError                                       = errors.New("RemoteValidationError, code 25")
-	NamespaceNotFound                                           = errors.New("NamespaceNotFound, code 26")
-	IndexNotFound                                               = errors.New("IndexNotFound, code 27")
-	PathNotViable                                               = errors.New("PathNotViable, code 28")
-	NonExistentPath                                             = errors.New("NonExistentPath, code 29")
-	InvalidPath                                                 = errors.New("InvalidPath, code 30")
-	RoleNotFound                                                = errors.New("RoleNotFound, code 31")
-	RolesNotRelated                                             = errors.New("RolesNotRelated, code 32")
-	PrivilegeNotFound                                           = errors.New("PrivilegeNotFound, code 33")
-	CannotBackfillArray                                         = errors.New("CannotBackfillArray, code 34")
-	UserModificationFailed                                      = errors.New("UserModificationFailed, code 35")
-	RemoteChangeDetected                                        = errors.New("RemoteChangeDetected, code 36")
-	FileRenameFailed                                            = errors.New("FileRenameFailed, code 37")
-	FileNotOpen                                                 = errors.New("FileNotOpen, code 38")
-	FileStreamFailed                                            = errors.New("FileStreamFailed, code 39")
-	ConflictingUpdateOperators                                  = errors.New("ConflictingUpdateOperators, code 40")
-	FileAlreadyOpen                                             = errors.New("FileAlreadyOpen, code 41")
-	LogWriteFailed                                              = errors.New("LogWriteFailed, code 42")
-	CursorNotFound                                              = errors.New("CursorNotFound, code 43")
-	UserDataInconsistent                                        = errors.New("UserDataInconsistent, code 45")
-	LockBusy                                                    = errors.New("LockBusy, code 46")
-	NoMatchingDocument                                          = errors.New("NoMatchingDocument, code 47")
-	NamespaceExists                                             = errors.New("NamespaceExists, code 48")
-	InvalidRoleModification                                     = errors.New("InvalidRoleModification, code 49")
-	MaxTimeMSExpired                                            = errors.New("MaxTimeMSExpired, code 50")
-	ManualInterventionRequired                                  = errors.New("ManualInterventionRequired, code 51")
-	DollarPrefixedFieldName                                     = errors.New("DollarPrefixedFieldName, code 52")
-	InvalidIdField                                              = errors.New("InvalidIdField, code 53")
-	NotSingleValueField                                         = errors.New("NotSingleValueField, code 54")
-	InvalidDBRef                                                = errors.New("InvalidDBRef, code 55")
-	EmptyFieldName                                              = errors.New("EmptyFieldName, code 56")
-	DottedFieldName                                             = errors.New("DottedFieldName, code 57")
-	RoleModificationFailed                                      = errors.New("RoleModificationFailed, code 58")
-	CommandNotFound                                             = errors.New("CommandNotFound, code 59")
-	ShardKeyNotFound                                            = errors.New("ShardKeyNotFound, code 61")
-	OplogOperationUnsupported                                   = errors.New("OplogOperationUnsupported, code 62")
-	StaleShardVersion                                           = errors.New("StaleShardVersion, code 63")
-	WriteConcernFailed                                          = errors.New("WriteConcernFailed, code 64")
-	MultipleErrorsOccurred                                      = errors.New("MultipleErrorsOccurred, code 65")
-	ImmutableField                                              = errors.New("ImmutableField, code 66")
-	CannotCreateIndex                                           = errors.New("CannotCreateIndex, code 67")
-	IndexAlreadyExists                                          = errors.New("IndexAlreadyExists, code 68")
-	AuthSchemaIncompatible                                      = errors.New("AuthSchemaIncompatible, code 69")
-	ShardNotFound                                               = errors.New("ShardNotFound, code 70")
-	ReplicaSetNotFound                                          = errors.New("ReplicaSetNotFound, code 71")
-	InvalidOptions                                              = errors.New("InvalidOptions, code 72")
-	InvalidNamespace                                            = errors.New("InvalidNamespace, code 73")
-	NodeNotFound                                                = errors.New("NodeNotFound, code 74")
-	WriteConcernLegacyOK                                        = errors.New("WriteConcernLegacyOK, code 75")
-	NoReplicationEnabled                                        = errors.New("NoReplicationEnabled, code 76")
-	OperationIncomplete                                         = errors.New("OperationIncomplete, code 77")
-	CommandResultSchemaViolation                                = errors.New("CommandResultSchemaViolation, code 78")
-	UnknownReplWriteConcern                                     = errors.New("UnknownReplWriteConcern, code 79")
-	RoleDataInconsistent                                        = errors.New("RoleDataInconsistent, code 80")
-	NoMatchParseContext                                         = errors.New("NoMatchParseContext, code 81")
-	NoProgressMade                                              = errors.New("NoProgressMade, code 82")
-	RemoteResultsUnavailable                                    = errors.New("RemoteResultsUnavailable, code 83")
-	IndexOptionsConflict                                        = errors.New("IndexOptionsConflict, code 85")
-	IndexKeySpecsConflict                                       = errors.New("IndexKeySpecsConflict, code 86")
-	CannotSplit                                                 = errors.New("CannotSplit, code 87")
-	NetworkTimeout                                              = errors.New("NetworkTimeout, code 89")
-	CallbackCanceled                                            = errors.New("CallbackCanceled, code 90")
-	ShutdownInProgress                                          = errors.New("ShutdownInProgress, code 91")
-	SecondaryAheadOfPrimary                                     = errors.New("SecondaryAheadOfPrimary, code 92")
-	InvalidReplicaSetConfig                                     = errors.New("InvalidReplicaSetConfig, code 93")
-	NotYetInitialized                                           = errors.New("NotYetInitialized, code 94")
-	NotSecondary                                                = errors.New("NotSecondary, code 95")
-	OperationFailed                                             = errors.New("OperationFailed, code 96")
-	NoProjectionFound                                           = errors.New("NoProjectionFound, code 97")
-	DBPathInUse                                                 = errors.New("DBPathInUse, code 98")
-	UnsatisfiableWriteConcern                                   = errors.New("UnsatisfiableWriteConcern, code 100")
-	OutdatedClient                                              = errors.New("OutdatedClient, code 101")
-	IncompatibleAuditMetadata                                   = errors.New("IncompatibleAuditMetadata, code 102")
-	NewReplicaSetConfigurationIncompatible                      = errors.New("NewReplicaSetConfigurationIncompatible, code 103")
-	NodeNotElectable                                            = errors.New("NodeNotElectable, code 104")
-	IncompatibleShardingMetadata                                = errors.New("IncompatibleShardingMetadata, code 105")
-	DistributedClockSkewed                                      = errors.New("DistributedClockSkewed, code 106")
-	LockFailed                                                  = errors.New("LockFailed, code 107")
-	InconsistentReplicaSetNames                                 = errors.New("InconsistentReplicaSetNames, code 108")
-	ConfigurationInProgress                                     = errors.New("ConfigurationInProgress, code 109")
-	CannotInitializeNodeWithData                                = errors.New("CannotInitializeNodeWithData, code 110")
-	NotExactValueField                                          = errors.New("NotExactValueField, code 111")
-	WriteConflict                                               = errors.New("WriteConflict, code 112")
-	InitialSyncFailure                                          = errors.New("InitialSyncFailure, code 113")
-	InitialSyncOplogSourceMissing                               = errors.New("InitialSyncOplogSourceMissing, code 114")
-	CommandNotSupported                                         = errors.New("CommandNotSupported, code 115")
-	DocTooLargeForCapped                                        = errors.New("DocTooLargeForCapped, code 116")
-	ConflictingOperationInProgress                              = errors.New("ConflictingOperationInProgress, code 117")
-	NamespaceNotSharded                                         = errors.New("NamespaceNotSharded, code 118")
-	InvalidSyncSource                                           = errors.New("InvalidSyncSource, code 119")
-	OplogStartMissing                                           = errors.New("OplogStartMissing, code 120")
-	DocumentValidationFailure                                   = errors.New("DocumentValidationFailure, code 121")
-	NotAReplicaSet                                              = errors.New("NotAReplicaSet, code 123")
-	IncompatibleElectionProtocol                                = errors.New("IncompatibleElectionProtocol, code 124")
-	CommandFailed                                               = errors.New("CommandFailed, code 125")
-	RPCProtocolNegotiationFailed                                = errors.New("RPCProtocolNegotiationFailed, code 126")
-	UnrecoverableRollbackError                                  = errors.New("UnrecoverableRollbackError, code 127")
-	LockNotFound                                                = errors.New("LockNotFound, code 128")
-	LockStateChangeFailed                                       = errors.New("LockStateChangeFailed, code 129")
-	SymbolNotFound                                              = errors.New("SymbolNotFound, code 130")
-	FailedToSatisfyReadPreference                               = errors.New("FailedToSatisfyReadPreference, code 133")
-	ReadConcernMajorityNotAvailableYet                          = errors.New("ReadConcernMajorityNotAvailableYet, code 134")
-	StaleTerm                                                   = errors.New("StaleTerm, code 135")
-	CappedPositionLost                                          = errors.New("CappedPositionLost, code 136")
-	IncompatibleShardingConfigVersion                           = errors.New("IncompatibleShardingConfigVersion, code 137")
-	RemoteOplogStale                                            = errors.New("RemoteOplogStale, code 138")
-	JSInterpreterFailure                                        = errors.New("JSInterpreterFailure, code 139")
-	InvalidSSLConfiguration                                     = errors.New("InvalidSSLConfiguration, code 140")
-	SSLHandshakeFailed                                          = errors.New("SSLHandshakeFailed, code 141")
-	JSUncatchableError                                          = errors.New("JSUncatchableError, code 142")
-	CursorInUse                                                 = errors.New("CursorInUse, code 143")
-	IncompatibleCatalogManager                                  = errors.New("IncompatibleCatalogManager, code 144")
-	PooledConnectionsDropped                                    = errors.New("PooledConnectionsDropped, code 145")
-	ExceededMemoryLimit                                         = errors.New("ExceededMemoryLimit, code 146")
-	ZLibError                                                   = errors.New("ZLibError, code 147")
-	ReadConcernMajorityNotEnabled                               = errors.New("ReadConcernMajorityNotEnabled, code 148")
-	NoConfigPrimary                                             = errors.New("NoConfigPrimary, code 149")
-	StaleEpoch                                                  = errors.New("StaleEpoch, code 150")
-	OperationCannotBeBatched                                    = errors.New("OperationCannotBeBatched, code 151")
-	OplogOutOfOrder                                             = errors.New("OplogOutOfOrder, code 152")
-	ChunkTooBig                                                 = errors.New("ChunkTooBig, code 153")
-	InconsistentShardIdentity                                   = errors.New("InconsistentShardIdentity, code 154")
-	CannotApplyOplogWhilePrimary                                = errors.New("CannotApplyOplogWhilePrimary, code 155")
-	CanRepairToDowngrade                                        = errors.New("CanRepairToDowngrade, code 157")
-	MustUpgrade                                                 = errors.New("MustUpgrade, code 158")
-	DurationOverflow                                            = errors.New("DurationOverflow, code 159")
-	MaxStalenessOutOfRange                                      = errors.New("MaxStalenessOutOfRange, code 160")
-	IncompatibleCollationVersion                                = errors.New("IncompatibleCollationVersion, code 161")
-	CollectionIsEmpty                                           = errors.New("CollectionIsEmpty, code 162")
-	ZoneStillInUse                                              = errors.New("ZoneStillInUse, code 163")
-	InitialSyncActive                                           = errors.New("InitialSyncActive, code 164")
-	ViewDepthLimitExceeded                                      = errors.New("ViewDepthLimitExceeded, code 165")
-	CommandNotSupportedOnView                                   = errors.New("CommandNotSupportedOnView, code 166")
-	OptionNotSupportedOnView                                    = errors.New("OptionNotSupportedOnView, code 167")
-	InvalidPipelineOperator                                     = errors.New("InvalidPipelineOperator, code 168")
-	CommandOnShardedViewNotSupportedOnMongod                    = errors.New("CommandOnShardedViewNotSupportedOnMongod, code 169")
-	TooManyMatchingDocuments                                    = errors.New("TooManyMatchingDocuments, code 170")
-	CannotIndexParallelArrays                                   = errors.New("CannotIndexParallelArrays, code 171")
-	TransportSessionClosed                                      = errors.New("TransportSessionClosed, code 172")
-	TransportSessionNotFound                                    = errors.New("TransportSessionNotFound, code 173")
-	TransportSessionUnknown                                     = errors.New("TransportSessionUnknown, code 174")
-	QueryPlanKilled                                             = errors.New("QueryPlanKilled, code 175")
-	FileOpenFailed                                              = errors.New("FileOpenFailed, code 176")
-	ZoneNotFound                                                = errors.New("ZoneNotFound, code 177")
-	RangeOverlapConflict                                        = errors.New("RangeOverlapConflict, code 178")
-	WindowsPdhError                                             = errors.New("WindowsPdhError, code 179")
-	BadPerfCounterPath                                          = errors.New("BadPerfCounterPath, code 180")
-	AmbiguousIndexKeyPattern                                    = errors.New("AmbiguousIndexKeyPattern, code 181")
-	InvalidViewDefinition                                       = errors.New("InvalidViewDefinition, code 182")
-	ClientMetadataMissingField                                  = errors.New("ClientMetadataMissingField, code 183")
-	ClientMetadataAppNameTooLarge                               = errors.New("ClientMetadataAppNameTooLarge, code 184")
-	ClientMetadataDocumentTooLarge                              = errors.New("ClientMetadataDocumentTooLarge, code 185")
-	ClientMetadataCannotBeMutated                               = errors.New("ClientMetadataCannotBeMutated, code 186")
-	LinearizableReadConcernError                                = errors.New("LinearizableReadConcernError, code 187")
-	IncompatibleServerVersion                                   = errors.New("IncompatibleServerVersion, code 188")
-	PrimarySteppedDown                                          = errors.New("PrimarySteppedDown, code 189")
-	MasterSlaveConnectionFailure                                = errors.New("MasterSlaveConnectionFailure, code 190")
-	FailPointEnabled                                            = errors.New("FailPointEnabled, code 192")
-	NoShardingEnabled                                           = errors.New("NoShardingEnabled, code 193")
-	BalancerInterrupted                                         = errors.New("BalancerInterrupted, code 194")
-	ViewPipelineMaxSizeExceeded                                 = errors.New("ViewPipelineMaxSizeExceeded, code 195")
-	InvalidIndexSpecificationOption                             = errors.New("InvalidIndexSpecificationOption, code 197")
-	ReplicaSetMonitorRemoved                                    = errors.New("ReplicaSetMonitorRemoved, code 199")
-	ChunkRangeCleanupPending                                    = errors.New("ChunkRangeCleanupPending, code 200")
-	CannotBuildIndexKeys                                        = errors.New("CannotBuildIndexKeys, code 201")
-	NetworkInterfaceExceededTimeLimit                           = errors.New("NetworkInterfaceExceededTimeLimit, code 202")
-	ShardingStateNotInitialized                                 = errors.New("ShardingStateNotInitialized, code 203")
-	TimeProofMismatch                                           = errors.New("TimeProofMismatch, code 204")
-	ClusterTimeFailsRateLimiter                                 = errors.New("ClusterTimeFailsRateLimiter, code 205")
-	NoSuchSession                                               = errors.New("NoSuchSession, code 206")
-	InvalidUUID                                                 = errors.New("InvalidUUID, code 207")
-	TooManyLocks                                                = errors.New("TooManyLocks, code 208")
-	StaleClusterTime                                            = errors.New("StaleClusterTime, code 209")
-	CannotVerifyAndSignLogicalTime                              = errors.New("CannotVerifyAndSignLogicalTime, code 210")
-	KeyNotFound                                                 = errors.New("KeyNotFound, code 211")
-	IncompatibleRollbackAlgorithm                               = errors.New("IncompatibleRollbackAlgorithm, code 212")
-	DuplicateSession                                            = errors.New("DuplicateSession, code 213")
-	AuthenticationRestrictionUnmet                              = errors.New("AuthenticationRestrictionUnmet, code 214")
-	DatabaseDropPending                                         = errors.New("DatabaseDropPending, code 215")
-	ElectionInProgress                                          = errors.New("ElectionInProgress, code 216")
-	IncompleteTransactionHistory                                = errors.New("IncompleteTransactionHistory, code 217")
-	UpdateOperationFailed                                       = errors.New("UpdateOperationFailed, code 218")
-	FTDCPathNotSet                                              = errors.New("FTDCPathNotSet, code 219")
-	FTDCPathAlreadySet                                          = errors.New("FTDCPathAlreadySet, code 220")
-	IndexModified                                               = errors.New("IndexModified, code 221")
-	CloseChangeStream                                           = errors.New("CloseChangeStream, code 222")
-	IllegalOpMsgFlag                                            = errors.New("IllegalOpMsgFlag, code 223")
-	QueryFeatureNotAllowed                                      = errors.New("QueryFeatureNotAllowed, code 224")
-	TransactionTooOld                                           = errors.New("TransactionTooOld, code 225")
-	AtomicityFailure                                            = errors.New("AtomicityFailure, code 226")
-	CannotImplicitlyCreateCollection                            = errors.New("CannotImplicitlyCreateCollection, code 227")
-	SessionTransferIncomplete                                   = errors.New("SessionTransferIncomplete, code 228")
-	MustDowngrade                                               = errors.New("MustDowngrade, code 229")
-	DNSHostNotFound                                             = errors.New("DNSHostNotFound, code 230")
-	DNSProtocolError                                            = errors.New("DNSProtocolError, code 231")
-	MaxSubPipelineDepthExceeded                                 = errors.New("MaxSubPipelineDepthExceeded, code 232")
-	TooManyDocumentSequences                                    = errors.New("TooManyDocumentSequences, code 233")
-	RetryChangeStream                                           = errors.New("RetryChangeStream, code 234")
-	InternalErrorNotSupported                                   = errors.New("InternalErrorNotSupported, code 235")
-	ForTestingErrorExtraInfo                                    = errors.New("ForTestingErrorExtraInfo, code 236")
-	CursorKilled                                                = errors.New("CursorKilled, code 237")
-	NotImplemented                                              = errors.New("NotImplemented, code 238")
-	SnapshotTooOld                                              = errors.New("SnapshotTooOld, code 239")
-	DNSRecordTypeMismatch                                       = errors.New("DNSRecordTypeMismatch, code 240")
-	ConversionFailure                                           = errors.New("ConversionFailure, code 241")
-	CannotCreateCollection                                      = errors.New("CannotCreateCollection, code 242")
-	IncompatibleWithUpgradedServer                              = errors.New("IncompatibleWithUpgradedServer, code 243")
-	BrokenPromise                                               = errors.New("BrokenPromise, code 245")
-	SnapshotUnavailable                                         = errors.New("SnapshotUnavailable, code 246")
-	ProducerConsumerQueueBatchTooLarge                          = errors.New("ProducerConsumerQueueBatchTooLarge, code 247")
-	ProducerConsumerQueueEndClosed                              = errors.New("ProducerConsumerQueueEndClosed, code 248")
-	StaleDbVersion                                              = errors.New("StaleDbVersion, code 249")
-	StaleChunkHistory                                           = errors.New("StaleChunkHistory, code 250")
-	NoSuchTransaction                                           = errors.New("NoSuchTransaction, code 251")
-	ReentrancyNotAllowed                                        = errors.New("ReentrancyNotAllowed, code 252")
-	FreeMonHttpInFlight                                         = errors.New("FreeMonHttpInFlight, code 253")
-	FreeMonHttpTemporaryFailure                                 = errors.New("FreeMonHttpTemporaryFailure, code 254")
-	FreeMonHttpPermanentFailure                                 = errors.New("FreeMonHttpPermanentFailure, code 255")
-	TransactionCommitted                                        = errors.New("TransactionCommitted, code 256")
-	TransactionTooLarge                                         = errors.New("TransactionTooLarge, code 257")
-	UnknownFeatureCompatibilityVersion                          = errors.New("UnknownFeatureCompatibilityVersion, code 258")
-	KeyedExecutorRetry                                          = errors.New("KeyedExecutorRetry, code 259")
-	InvalidResumeToken                                          = errors.New("InvalidResumeToken, code 260")
-	TooManyLogicalSessions                                      = errors.New("TooManyLogicalSessions, code 261")
-	ExceededTimeLimit                                           = errors.New("ExceededTimeLimit, code 262")
-	OperationNotSupportedInTransaction                          = errors.New("OperationNotSupportedInTransaction, code 263")
-	TooManyFilesOpen                                            = errors.New("TooManyFilesOpen, code 264")
-	OrphanedRangeCleanUpFailed                                  = errors.New("OrphanedRangeCleanUpFailed, code 265")
-	FailPointSetFailed                                          = errors.New("FailPointSetFailed, code 266")
-	PreparedTransactionInProgress                               = errors.New("PreparedTransactionInProgress, code 267")
-	CannotBackup                                                = errors.New("CannotBackup, code 268")
-	DataModifiedByRepair                                        = errors.New("DataModifiedByRepair, code 269")
-	RepairedReplicaSetNode                                      = errors.New("RepairedReplicaSetNode, code 270")
-	JSInterpreterFailureWithStack                               = errors.New("JSInterpreterFailureWithStack, code 271")
-	MigrationConflict                                           = errors.New("MigrationConflict, code 272")
-	ProducerConsumerQueueProducerQueueDepthExceeded             = errors.New("ProducerConsumerQueueProducerQueueDepthExceeded, code 273")
-	ProducerConsumerQueueConsumed                               = errors.New("ProducerConsumerQueueConsumed, code 274")
-	ExchangePassthrough                                         = errors.New("ExchangePassthrough, code 275")
-	IndexBuildAborted                                           = errors.New("IndexBuildAborted, code 276")
-	AlarmAlreadyFulfilled                                       = errors.New("AlarmAlreadyFulfilled, code 277")
-	UnsatisfiableCommitQuorum                                   = errors.New("UnsatisfiableCommitQuorum, code 278")
-	ClientDisconnect                                            = errors.New("ClientDisconnect, code 279")
-	ChangeStreamFatalError                                      = errors.New("ChangeStreamFatalError, code 280")
-	TransactionCoordinatorSteppingDown                          = errors.New("TransactionCoordinatorSteppingDown, code 281")
-	TransactionCoordinatorReachedAbortDecision                  = errors.New("TransactionCoordinatorReachedAbortDecision, code 282")
-	WouldChangeOwningShard                                      = errors.New("WouldChangeOwningShard, code 283")
-	ForTestingErrorExtraInfoWithExtraInfoInNamespace            = errors.New("ForTestingErrorExtraInfoWithExtraInfoInNamespace, code 284")
-	IndexBuildAlreadyInProgress                                 = errors.New("IndexBuildAlreadyInProgress, code 285")
-	ChangeStreamHistoryLost                                     = errors.New("ChangeStreamHistoryLost, code 286")
-	TransactionCoordinatorDeadlineTaskCanceled                  = errors.New("TransactionCoordinatorDeadlineTaskCanceled, code 287")
-	ChecksumMismatch                                            = errors.New("ChecksumMismatch, code 288")
-	WaitForMajorityServiceEarlierOpTimeAvailable                = errors.New("WaitForMajorityServiceEarlierOpTimeAvailable, code 289")
-	TransactionExceededLifetimeLimitSeconds                     = errors.New("TransactionExceededLifetimeLimitSeconds, code 290")
-	NoQueryExecutionPlans                                       = errors.New("NoQueryExecutionPlans, code 291")
-	QueryExceededMemoryLimitNoDiskUseAllowed                    = errors.New("QueryExceededMemoryLimitNoDiskUseAllowed, code 292")
-	InvalidSeedList                                             = errors.New("InvalidSeedList, code 293")
-	InvalidTopologyType                                         = errors.New("InvalidTopologyType, code 294")
-	InvalidHeartBeatFrequency                                   = errors.New("InvalidHeartBeatFrequency, code 295")
-	TopologySetNameRequired                                     = errors.New("TopologySetNameRequired, code 296")
-	HierarchicalAcquisitionLevelViolation                       = errors.New("HierarchicalAcquisitionLevelViolation, code 297")
-	InvalidServerType                                           = errors.New("InvalidServerType, code 298")
-	OCSPCertificateStatusRevoked                                = errors.New("OCSPCertificateStatusRevoked, code 299")
-	RangeDeletionAbandonedBecauseCollectionWithUUIDDoesNotExist = errors.New("RangeDeletionAbandonedBecauseCollectionWithUUIDDoesNotExist, code 300")
-	DataCorruptionDetected                                      = errors.New("DataCorruptionDetected, code 301")
-	OCSPCertificateStatusUnknown                                = errors.New("OCSPCertificateStatusUnknown, code 302")
-	SplitHorizonChange                                          = errors.New("SplitHorizonChange, code 303")
-	ShardInvalidatedForTargeting                                = errors.New("ShardInvalidatedForTargeting, code 304")
-	RangeDeletionAbandonedBecauseTaskDocumentDoesNotExist       = errors.New("RangeDeletionAbandonedBecauseTaskDocumentDoesNotExist, code 307")
-	CurrentConfigNotCommittedYet                                = errors.New("CurrentConfigNotCommittedYet, code 308")
-	ExhaustCommandFinished                                      = errors.New("ExhaustCommandFinished, code 309")
-	PeriodicJobIsStopped                                        = errors.New("PeriodicJobIsStopped, code 310")
-	TransactionCoordinatorCanceled                              = errors.New("TransactionCoordinatorCanceled, code 311")
-	OperationIsKilledAndDelisted                                = errors.New("OperationIsKilledAndDelisted, code 312")
-	ResumableRangeDeleterDisabled                               = errors.New("ResumableRangeDeleterDisabled, code 313")
-	ObjectIsBusy                                                = errors.New("ObjectIsBusy, code 314")
-	TooStaleToSyncFromSource                                    = errors.New("TooStaleToSyncFromSource, code 315")
-	QueryTrialRunCompleted                                      = errors.New("QueryTrialRunCompleted, code 316")
-	ConnectionPoolExpired                                       = errors.New("ConnectionPoolExpired, code 317")
-	ForTestingOptionalErrorExtraInfo                            = errors.New("ForTestingOptionalErrorExtraInfo, code 318")
-	MovePrimaryInProgress                                       = errors.New("MovePrimaryInProgress, code 319")
-	TenantMigrationConflict                                     = errors.New("TenantMigrationConflict, code 320")
-	TenantMigrationCommitted                                    = errors.New("TenantMigrationCommitted, code 321")
-	APIVersionError                                             = errors.New("APIVersionError, code 322")
-	APIStrictError                                              = errors.New("APIStrictError, code 323")
-	APIDeprecationError                                         = errors.New("APIDeprecationError, code 324")
-	TenantMigrationAborted                                      = errors.New("TenantMigrationAborted, code 325")
-	OplogQueryMinTsMissing                                      = errors.New("OplogQueryMinTsMissing, code 326")
-	NoSuchTenantMigration                                       = errors.New("NoSuchTenantMigration, code 327")
-	TenantMigrationAccessBlockerShuttingDown                    = errors.New("TenantMigrationAccessBlockerShuttingDown, code 328")
-	TenantMigrationInProgress                                   = errors.New("TenantMigrationInProgress, code 329")
-	SkipCommandExecution                                        = errors.New("SkipCommandExecution, code 330")
-	FailedToRunWithReplyBuilder                                 = errors.New("FailedToRunWithReplyBuilder, code 331")
-	CannotDowngrade                                             = errors.New("CannotDowngrade, code 332")
-	ServiceExecutorInShutdown                                   = errors.New("ServiceExecutorInShutdown, code 333")
-	MechanismUnavailable                                        = errors.New("MechanismUnavailable, code 334")
-	TenantMigrationForgotten                                    = errors.New("TenantMigrationForgotten, code 335")
-	SocketException                                             = errors.New("SocketException, code 9001")
-	CannotGrowDocumentInCappedNamespace                         = errors.New("CannotGrowDocumentInCappedNamespace, code 10003")
-	NotWritablePrimary                                          = errors.New("NotWritablePrimary, code 10107")
-	BSONObjectTooLarge                                          = errors.New("BSONObjectTooLarge, code 10334")
-	DuplicateKey                                                = errors.New("DuplicateKey, code 11000")
-	InterruptedAtShutdown                                       = errors.New("InterruptedAtShutdown, code 11600")
-	Interrupted                                                 = errors.New("Interrupted, code 11601")
-	InterruptedDueToReplStateChange                             = errors.New("InterruptedDueToReplStateChange, code 11602")
-	BackgroundOperationInProgressForDatabase                    = errors.New("BackgroundOperationInProgressForDatabase, code 12586")
-	BackgroundOperationInProgressForNamespace                   = errors.New("BackgroundOperationInProgressForNamespace, code 12587")
-	MergeStageNoMatchingDocument                                = errors.New("MergeStageNoMatchingDocument, code 13113")
-	DatabaseDifferCase                                          = errors.New("DatabaseDifferCase, code 13297")
-	StaleConfig                                                 = errors.New("StaleConfig, code 13388")
-	NotPrimaryNoSecondaryOk                                     = errors.New("NotPrimaryNoSecondaryOk, code 13435")
-	NotPrimaryOrSecondary                                       = errors.New("NotPrimaryOrSecondary, code 13436")
-	OutOfDiskSpace                                              = errors.New("OutOfDiskSpace, code 14031")
-	ClientMarkedKilled                                          = errors.New("ClientMarkedKilled, code 46841")
+	ErrInternalError                                               = errors.New("InternalError, code 1")
+	ErrBadValue                                                    = errors.New("BadValue, code 2")
+	ErrNoSuchKey                                                   = errors.New("NoSuchKey, code 4")
+	ErrGraphContainsCycle                                          = errors.New("GraphContainsCycle, code 5")
+	ErrHostUnreachable                                             = errors.New("HostUnreachable, code 6")
+	ErrHostNotFound                                                = errors.New("HostNotFound, code 7")
+	ErrUnknownError                                                = errors.New("UnknownError, code 8")
+	ErrFailedToParse                                               = errors.New("FailedToParse, code 9")
+	ErrCannotMutateObject                                          = errors.New("CannotMutateObject, code 10")
+	ErrUserNotFound                                                = errors.New("UserNotFound, code 11")
+	ErrUnsupportedFormat                                           = errors.New("UnsupportedFormat, code 12")
+	ErrUnauthorized                                                = errors.New("Unauthorized, code 13")
+	ErrTypeMismatch                                                = errors.New("TypeMismatch, code 14")
+	ErrOverflow                                                    = errors.New("Overflow, code 15")
+	ErrInvalidLength                                               = errors.New("InvalidLength, code 16")
+	ErrProtocolError                                               = errors.New("ProtocolError, code 17")
+	ErrAuthenticationFailed                                        = errors.New("AuthenticationFailed, code 18")
+	ErrCannotReuseObject                                           = errors.New("CannotReuseObject, code 19")
+	ErrIllegalOperation                                            = errors.New("IllegalOperation, code 20")
+	ErrEmptyArrayOperation                                         = errors.New("EmptyArrayOperation, code 21")
+	ErrInvalidBSON                                                 = errors.New("InvalidBSON, code 22")
+	ErrAlreadyInitialized                                          = errors.New("AlreadyInitialized, code 23")
+	ErrLockTimeout                                                 = errors.New("LockTimeout, code 24")
+	ErrRemoteValidationError                                       = errors.New("RemoteValidationError, code 25")
+	ErrNamespaceNotFound                                           = errors.New("NamespaceNotFound, code 26")
+	ErrIndexNotFound                                               = errors.New("IndexNotFound, code 27")
+	ErrPathNotViable                                               = errors.New("PathNotViable, code 28")
+	ErrNonExistentPath                                             = errors.New("NonExistentPath, code 29")
+	ErrInvalidPath                                                 = errors.New("InvalidPath, code 30")
+	ErrRoleNotFound                                                = errors.New("RoleNotFound, code 31")
+	ErrRolesNotRelated                                             = errors.New("RolesNotRelated, code 32")
+	ErrPrivilegeNotFound                                           = errors.New("PrivilegeNotFound, code 33")
+	ErrCannotBackfillArray                                         = errors.New("CannotBackfillArray, code 34")
+	ErrUserModificationFailed                                      = errors.New("UserModificationFailed, code 35")
+	ErrRemoteChangeDetected                                        = errors.New("RemoteChangeDetected, code 36")
+	ErrFileRenameFailed                                            = errors.New("FileRenameFailed, code 37")
+	ErrFileNotOpen                                                 = errors.New("FileNotOpen, code 38")
+	ErrFileStreamFailed                                            = errors.New("FileStreamFailed, code 39")
+	ErrConflictingUpdateOperators                                  = errors.New("ConflictingUpdateOperators, code 40")
+	ErrFileAlreadyOpen                                             = errors.New("FileAlreadyOpen, code 41")
+	ErrLogWriteFailed                                              = errors.New("LogWriteFailed, code 42")
+	ErrCursorNotFound                                              = errors.New("CursorNotFound, code 43")
+	ErrUserDataInconsistent                                        = errors.New("UserDataInconsistent, code 45")
+	ErrLockBusy                                                    = errors.New("LockBusy, code 46")
+	ErrNoMatchingDocument                                          = errors.New("NoMatchingDocument, code 47")
+	ErrNamespaceExists                                             = errors.New("NamespaceExists, code 48")
+	ErrInvalidRoleModification                                     = errors.New("InvalidRoleModification, code 49")
+	ErrMaxTimeMSExpired                                            = errors.New("MaxTimeMSExpired, code 50")
+	ErrManualInterventionRequired                                  = errors.New("ManualInterventionRequired, code 51")
+	ErrDollarPrefixedFieldName                                     = errors.New("DollarPrefixedFieldName, code 52")
+	ErrInvalidIdField                                              = errors.New("InvalidIdField, code 53")
+	ErrNotSingleValueField                                         = errors.New("NotSingleValueField, code 54")
+	ErrInvalidDBRef                                                = errors.New("InvalidDBRef, code 55")
+	ErrEmptyFieldName                                              = errors.New("EmptyFieldName, code 56")
+	ErrDottedFieldName                                             = errors.New("DottedFieldName, code 57")
+	ErrRoleModificationFailed                                      = errors.New("RoleModificationFailed, code 58")
+	ErrCommandNotFound                                             = errors.New("CommandNotFound, code 59")
+	ErrShardKeyNotFound                                            = errors.New("ShardKeyNotFound, code 61")
+	ErrOplogOperationUnsupported                                   = errors.New("OplogOperationUnsupported, code 62")
+	ErrStaleShardVersion                                           = errors.New("StaleShardVersion, code 63")
+	ErrWriteConcernFailed                                          = errors.New("WriteConcernFailed, code 64")
+	ErrMultipleErrorsOccurred                                      = errors.New("MultipleErrorsOccurred, code 65")
+	ErrImmutableField                                              = errors.New("ImmutableField, code 66")
+	ErrCannotCreateIndex                                           = errors.New("CannotCreateIndex, code 67")
+	ErrIndexAlreadyExists                                          = errors.New("IndexAlreadyExists, code 68")
+	ErrAuthSchemaIncompatible                                      = errors.New("AuthSchemaIncompatible, code 69")
+	ErrShardNotFound                                               = errors.New("ShardNotFound, code 70")
+	ErrReplicaSetNotFound                                          = errors.New("ReplicaSetNotFound, code 71")
+	ErrInvalidOptions                                              = errors.New("InvalidOptions, code 72")
+	ErrInvalidNamespace                                            = errors.New("InvalidNamespace, code 73")
+	ErrNodeNotFound                                                = errors.New("NodeNotFound, code 74")
+	ErrWriteConcernLegacyOK                                        = errors.New("WriteConcernLegacyOK, code 75")
+	ErrNoReplicationEnabled                                        = errors.New("NoReplicationEnabled, code 76")
+	ErrOperationIncomplete                                         = errors.New("OperationIncomplete, code 77")
+	ErrCommandResultSchemaViolation                                = errors.New("CommandResultSchemaViolation, code 78")
+	ErrUnknownReplWriteConcern                                     = errors.New("UnknownReplWriteConcern, code 79")
+	ErrRoleDataInconsistent                                        = errors.New("RoleDataInconsistent, code 80")
+	ErrNoMatchParseContext                                         = errors.New("NoMatchParseContext, code 81")
+	ErrNoProgressMade                                              = errors.New("NoProgressMade, code 82")
+	ErrRemoteResultsUnavailable                                    = errors.New("RemoteResultsUnavailable, code 83")
+	ErrIndexOptionsConflict                                        = errors.New("IndexOptionsConflict, code 85")
+	ErrIndexKeySpecsConflict                                       = errors.New("IndexKeySpecsConflict, code 86")
+	ErrCannotSplit                                                 = errors.New("CannotSplit, code 87")
+	ErrNetworkTimeout                                              = errors.New("NetworkTimeout, code 89")
+	ErrCallbackCanceled                                            = errors.New("CallbackCanceled, code 90")
+	ErrShutdownInProgress                                          = errors.New("ShutdownInProgress, code 91")
+	ErrSecondaryAheadOfPrimary                                     = errors.New("SecondaryAheadOfPrimary, code 92")
+	ErrInvalidReplicaSetConfig                                     = errors.New("InvalidReplicaSetConfig, code 93")
+	ErrNotYetInitialized                                           = errors.New("NotYetInitialized, code 94")
+	ErrNotSecondary                                                = errors.New("NotSecondary, code 95")
+	ErrOperationFailed                                             = errors.New("OperationFailed, code 96")
+	ErrNoProjectionFound                                           = errors.New("NoProjectionFound, code 97")
+	ErrDBPathInUse                                                 = errors.New("DBPathInUse, code 98")
+	ErrUnsatisfiableWriteConcern                                   = errors.New("UnsatisfiableWriteConcern, code 100")
+	ErrOutdatedClient                                              = errors.New("OutdatedClient, code 101")
+	ErrIncompatibleAuditMetadata                                   = errors.New("IncompatibleAuditMetadata, code 102")
+	ErrNewReplicaSetConfigurationIncompatible                      = errors.New("NewReplicaSetConfigurationIncompatible, code 103")
+	ErrNodeNotElectable                                            = errors.New("NodeNotElectable, code 104")
+	ErrIncompatibleShardingMetadata                                = errors.New("IncompatibleShardingMetadata, code 105")
+	ErrDistributedClockSkewed                                      = errors.New("DistributedClockSkewed, code 106")
+	ErrLockFailed                                                  = errors.New("LockFailed, code 107")
+	ErrInconsistentReplicaSetNames                                 = errors.New("InconsistentReplicaSetNames, code 108")
+	ErrConfigurationInProgress                                     = errors.New("ConfigurationInProgress, code 109")
+	ErrCannotInitializeNodeWithData                                = errors.New("CannotInitializeNodeWithData, code 110")
+	ErrNotExactValueField                                          = errors.New("NotExactValueField, code 111")
+	ErrWriteConflict                                               = errors.New("WriteConflict, code 112")
+	ErrInitialSyncFailure                                          = errors.New("InitialSyncFailure, code 113")
+	ErrInitialSyncOplogSourceMissing                               = errors.New("InitialSyncOplogSourceMissing, code 114")
+	ErrCommandNotSupported                                         = errors.New("CommandNotSupported, code 115")
+	ErrDocTooLargeForCapped                                        = errors.New("DocTooLargeForCapped, code 116")
+	ErrConflictingOperationInProgress                              = errors.New("ConflictingOperationInProgress, code 117")
+	ErrNamespaceNotSharded                                         = errors.New("NamespaceNotSharded, code 118")
+	ErrInvalidSyncSource                                           = errors.New("InvalidSyncSource, code 119")
+	ErrOplogStartMissing                                           = errors.New("OplogStartMissing, code 120")
+	ErrDocumentValidationFailure                                   = errors.New("DocumentValidationFailure, code 121")
+	ErrNotAReplicaSet                                              = errors.New("NotAReplicaSet, code 123")
+	ErrIncompatibleElectionProtocol                                = errors.New("IncompatibleElectionProtocol, code 124")
+	ErrCommandFailed                                               = errors.New("CommandFailed, code 125")
+	ErrRPCProtocolNegotiationFailed                                = errors.New("RPCProtocolNegotiationFailed, code 126")
+	ErrUnrecoverableRollbackError                                  = errors.New("UnrecoverableRollbackError, code 127")
+	ErrLockNotFound                                                = errors.New("LockNotFound, code 128")
+	ErrLockStateChangeFailed                                       = errors.New("LockStateChangeFailed, code 129")
+	ErrSymbolNotFound                                              = errors.New("SymbolNotFound, code 130")
+	ErrFailedToSatisfyReadPreference                               = errors.New("FailedToSatisfyReadPreference, code 133")
+	ErrReadConcernMajorityNotAvailableYet                          = errors.New("ReadConcernMajorityNotAvailableYet, code 134")
+	ErrStaleTerm                                                   = errors.New("StaleTerm, code 135")
+	ErrCappedPositionLost                                          = errors.New("CappedPositionLost, code 136")
+	ErrIncompatibleShardingConfigVersion                           = errors.New("IncompatibleShardingConfigVersion, code 137")
+	ErrRemoteOplogStale                                            = errors.New("RemoteOplogStale, code 138")
+	ErrJSInterpreterFailure                                        = errors.New("JSInterpreterFailure, code 139")
+	ErrInvalidSSLConfiguration                                     = errors.New("InvalidSSLConfiguration, code 140")
+	ErrSSLHandshakeFailed                                          = errors.New("SSLHandshakeFailed, code 141")
+	ErrJSUncatchableError                                          = errors.New("JSUncatchableError, code 142")
+	ErrCursorInUse                                                 = errors.New("CursorInUse, code 143")
+	ErrIncompatibleCatalogManager                                  = errors.New("IncompatibleCatalogManager, code 144")
+	ErrPooledConnectionsDropped                                    = errors.New("PooledConnectionsDropped, code 145")
+	ErrExceededMemoryLimit                                         = errors.New("ExceededMemoryLimit, code 146")
+	ErrZLibError                                                   = errors.New("ZLibError, code 147")
+	ErrReadConcernMajorityNotEnabled                               = errors.New("ReadConcernMajorityNotEnabled, code 148")
+	ErrNoConfigPrimary                                             = errors.New("NoConfigPrimary, code 149")
+	ErrStaleEpoch                                                  = errors.New("StaleEpoch, code 150")
+	ErrOperationCannotBeBatched                                    = errors.New("OperationCannotBeBatched, code 151")
+	ErrOplogOutOfOrder                                             = errors.New("OplogOutOfOrder, code 152")
+	ErrChunkTooBig                                                 = errors.New("ChunkTooBig, code 153")
+	ErrInconsistentShardIdentity                                   = errors.New("InconsistentShardIdentity, code 154")
+	ErrCannotApplyOplogWhilePrimary                                = errors.New("CannotApplyOplogWhilePrimary, code 155")
+	ErrCanRepairToDowngrade                                        = errors.New("CanRepairToDowngrade, code 157")
+	ErrMustUpgrade                                                 = errors.New("MustUpgrade, code 158")
+	ErrDurationOverflow                                            = errors.New("DurationOverflow, code 159")
+	ErrMaxStalenessOutOfRange                                      = errors.New("MaxStalenessOutOfRange, code 160")
+	ErrIncompatibleCollationVersion                                = errors.New("IncompatibleCollationVersion, code 161")
+	ErrCollectionIsEmpty                                           = errors.New("CollectionIsEmpty, code 162")
+	ErrZoneStillInUse                                              = errors.New("ZoneStillInUse, code 163")
+	ErrInitialSyncActive                                           = errors.New("InitialSyncActive, code 164")
+	ErrViewDepthLimitExceeded                                      = errors.New("ViewDepthLimitExceeded, code 165")
+	ErrCommandNotSupportedOnView                                   = errors.New("CommandNotSupportedOnView, code 166")
+	ErrOptionNotSupportedOnView                                    = errors.New("OptionNotSupportedOnView, code 167")
+	ErrInvalidPipelineOperator                                     = errors.New("InvalidPipelineOperator, code 168")
+	ErrCommandOnShardedViewNotSupportedOnMongod                    = errors.New("CommandOnShardedViewNotSupportedOnMongod, code 169")
+	ErrTooManyMatchingDocuments                                    = errors.New("TooManyMatchingDocuments, code 170")
+	ErrCannotIndexParallelArrays                                   = errors.New("CannotIndexParallelArrays, code 171")
+	ErrTransportSessionClosed                                      = errors.New("TransportSessionClosed, code 172")
+	ErrTransportSessionNotFound                                    = errors.New("TransportSessionNotFound, code 173")
+	ErrTransportSessionUnknown                                     = errors.New("TransportSessionUnknown, code 174")
+	ErrQueryPlanKilled                                             = errors.New("QueryPlanKilled, code 175")
+	ErrFileOpenFailed                                              = errors.New("FileOpenFailed, code 176")
+	ErrZoneNotFound                                                = errors.New("ZoneNotFound, code 177")
+	ErrRangeOverlapConflict                                        = errors.New("RangeOverlapConflict, code 178")
+	ErrWindowsPdhError                                             = errors.New("WindowsPdhError, code 179")
+	ErrBadPerfCounterPath                                          = errors.New("BadPerfCounterPath, code 180")
+	ErrAmbiguousIndexKeyPattern                                    = errors.New("AmbiguousIndexKeyPattern, code 181")
+	ErrInvalidViewDefinition                                       = errors.New("InvalidViewDefinition, code 182")
+	ErrClientMetadataMissingField                                  = errors.New("ClientMetadataMissingField, code 183")
+	ErrClientMetadataAppNameTooLarge                               = errors.New("ClientMetadataAppNameTooLarge, code 184")
+	ErrClientMetadataDocumentTooLarge                              = errors.New("ClientMetadataDocumentTooLarge, code 185")
+	ErrClientMetadataCannotBeMutated                               = errors.New("ClientMetadataCannotBeMutated, code 186")
+	ErrLinearizableReadConcernError                                = errors.New("LinearizableReadConcernError, code 187")
+	ErrIncompatibleServerVersion                                   = errors.New("IncompatibleServerVersion, code 188")
+	ErrPrimarySteppedDown                                          = errors.New("PrimarySteppedDown, code 189")
+	ErrMasterSlaveConnectionFailure                                = errors.New("MasterSlaveConnectionFailure, code 190")
+	ErrFailPointEnabled                                            = errors.New("FailPointEnabled, code 192")
+	ErrNoShardingEnabled                                           = errors.New("NoShardingEnabled, code 193")
+	ErrBalancerInterrupted                                         = errors.New("BalancerInterrupted, code 194")
+	ErrViewPipelineMaxSizeExceeded                                 = errors.New("ViewPipelineMaxSizeExceeded, code 195")
+	ErrInvalidIndexSpecificationOption                             = errors.New("InvalidIndexSpecificationOption, code 197")
+	ErrReplicaSetMonitorRemoved                                    = errors.New("ReplicaSetMonitorRemoved, code 199")
+	ErrChunkRangeCleanupPending                                    = errors.New("ChunkRangeCleanupPending, code 200")
+	ErrCannotBuildIndexKeys                                        = errors.New("CannotBuildIndexKeys, code 201")
+	ErrNetworkInterfaceExceededTimeLimit                           = errors.New("NetworkInterfaceExceededTimeLimit, code 202")
+	ErrShardingStateNotInitialized                                 = errors.New("ShardingStateNotInitialized, code 203")
+	ErrTimeProofMismatch                                           = errors.New("TimeProofMismatch, code 204")
+	ErrClusterTimeFailsRateLimiter                                 = errors.New("ClusterTimeFailsRateLimiter, code 205")
+	ErrNoSuchSession                                               = errors.New("NoSuchSession, code 206")
+	ErrInvalidUUID                                                 = errors.New("InvalidUUID, code 207")
+	ErrTooManyLocks                                                = errors.New("TooManyLocks, code 208")
+	ErrStaleClusterTime                                            = errors.New("StaleClusterTime, code 209")
+	ErrCannotVerifyAndSignLogicalTime                              = errors.New("CannotVerifyAndSignLogicalTime, code 210")
+	ErrKeyNotFound                                                 = errors.New("KeyNotFound, code 211")
+	ErrIncompatibleRollbackAlgorithm                               = errors.New("IncompatibleRollbackAlgorithm, code 212")
+	ErrDuplicateSession                                            = errors.New("DuplicateSession, code 213")
+	ErrAuthenticationRestrictionUnmet                              = errors.New("AuthenticationRestrictionUnmet, code 214")
+	ErrDatabaseDropPending                                         = errors.New("DatabaseDropPending, code 215")
+	ErrElectionInProgress                                          = errors.New("ElectionInProgress, code 216")
+	ErrIncompleteTransactionHistory                                = errors.New("IncompleteTransactionHistory, code 217")
+	ErrUpdateOperationFailed                                       = errors.New("UpdateOperationFailed, code 218")
+	ErrFTDCPathNotSet                                              = errors.New("FTDCPathNotSet, code 219")
+	ErrFTDCPathAlreadySet                                          = errors.New("FTDCPathAlreadySet, code 220")
+	ErrIndexModified                                               = errors.New("IndexModified, code 221")
+	ErrCloseChangeStream                                           = errors.New("CloseChangeStream, code 222")
+	ErrIllegalOpMsgFlag                                            = errors.New("IllegalOpMsgFlag, code 223")
+	ErrQueryFeatureNotAllowed                                      = errors.New("QueryFeatureNotAllowed, code 224")
+	ErrTransactionTooOld                                           = errors.New("TransactionTooOld, code 225")
+	ErrAtomicityFailure                                            = errors.New("AtomicityFailure, code 226")
+	ErrCannotImplicitlyCreateCollection                            = errors.New("CannotImplicitlyCreateCollection, code 227")
+	ErrSessionTransferIncomplete                                   = errors.New("SessionTransferIncomplete, code 228")
+	ErrMustDowngrade                                               = errors.New("MustDowngrade, code 229")
+	ErrDNSHostNotFound                                             = errors.New("DNSHostNotFound, code 230")
+	ErrDNSProtocolError                                            = errors.New("DNSProtocolError, code 231")
+	ErrMaxSubPipelineDepthExceeded                                 = errors.New("MaxSubPipelineDepthExceeded, code 232")
+	ErrTooManyDocumentSequences                                    = errors.New("TooManyDocumentSequences, code 233")
+	ErrRetryChangeStream                                           = errors.New("RetryChangeStream, code 234")
+	ErrInternalErrorNotSupported                                   = errors.New("InternalErrorNotSupported, code 235")
+	ErrForTestingErrorExtraInfo                                    = errors.New("ForTestingErrorExtraInfo, code 236")
+	ErrCursorKilled                                                = errors.New("CursorKilled, code 237")
+	ErrNotImplemented                                              = errors.New("NotImplemented, code 238")
+	ErrSnapshotTooOld                                              = errors.New("SnapshotTooOld, code 239")
+	ErrDNSRecordTypeMismatch                                       = errors.New("DNSRecordTypeMismatch, code 240")
+	ErrConversionFailure                                           = errors.New("ConversionFailure, code 241")
+	ErrCannotCreateCollection                                      = errors.New("CannotCreateCollection, code 242")
+	ErrIncompatibleWithUpgradedServer                              = errors.New("IncompatibleWithUpgradedServer, code 243")
+	ErrBrokenPromise                                               = errors.New("BrokenPromise, code 245")
+	ErrSnapshotUnavailable                                         = errors.New("SnapshotUnavailable, code 246")
+	ErrProducerConsumerQueueBatchTooLarge                          = errors.New("ProducerConsumerQueueBatchTooLarge, code 247")
+	ErrProducerConsumerQueueEndClosed                              = errors.New("ProducerConsumerQueueEndClosed, code 248")
+	ErrStaleDbVersion                                              = errors.New("StaleDbVersion, code 249")
+	ErrStaleChunkHistory                                           = errors.New("StaleChunkHistory, code 250")
+	ErrNoSuchTransaction                                           = errors.New("NoSuchTransaction, code 251")
+	ErrReentrancyNotAllowed                                        = errors.New("ReentrancyNotAllowed, code 252")
+	ErrFreeMonHttpInFlight                                         = errors.New("FreeMonHttpInFlight, code 253")
+	ErrFreeMonHttpTemporaryFailure                                 = errors.New("FreeMonHttpTemporaryFailure, code 254")
+	ErrFreeMonHttpPermanentFailure                                 = errors.New("FreeMonHttpPermanentFailure, code 255")
+	ErrTransactionCommitted                                        = errors.New("TransactionCommitted, code 256")
+	ErrTransactionTooLarge                                         = errors.New("TransactionTooLarge, code 257")
+	ErrUnknownFeatureCompatibilityVersion                          = errors.New("UnknownFeatureCompatibilityVersion, code 258")
+	ErrKeyedExecutorRetry                                          = errors.New("KeyedExecutorRetry, code 259")
+	ErrInvalidResumeToken                                          = errors.New("InvalidResumeToken, code 260")
+	ErrTooManyLogicalSessions                                      = errors.New("TooManyLogicalSessions, code 261")
+	ErrExceededTimeLimit                                           = errors.New("ExceededTimeLimit, code 262")
+	ErrOperationNotSupportedInTransaction                          = errors.New("OperationNotSupportedInTransaction, code 263")
+	ErrTooManyFilesOpen                                            = errors.New("TooManyFilesOpen, code 264")
+	ErrOrphanedRangeCleanUpFailed                                  = errors.New("OrphanedRangeCleanUpFailed, code 265")
+	ErrFailPointSetFailed                                          = errors.New("FailPointSetFailed, code 266")
+	ErrPreparedTransactionInProgress                               = errors.New("PreparedTransactionInProgress, code 267")
+	ErrCannotBackup                                                = errors.New("CannotBackup, code 268")
+	ErrDataModifiedByRepair                                        = errors.New("DataModifiedByRepair, code 269")
+	ErrRepairedReplicaSetNode                                      = errors.New("RepairedReplicaSetNode, code 270")
+	ErrJSInterpreterFailureWithStack                               = errors.New("JSInterpreterFailureWithStack, code 271")
+	ErrMigrationConflict                                           = errors.New("MigrationConflict, code 272")
+	ErrProducerConsumerQueueProducerQueueDepthExceeded             = errors.New("ProducerConsumerQueueProducerQueueDepthExceeded, code 273")
+	ErrProducerConsumerQueueConsumed                               = errors.New("ProducerConsumerQueueConsumed, code 274")
+	ErrExchangePassthrough                                         = errors.New("ExchangePassthrough, code 275")
+	ErrIndexBuildAborted                                           = errors.New("IndexBuildAborted, code 276")
+	ErrAlarmAlreadyFulfilled                                       = errors.New("AlarmAlreadyFulfilled, code 277")
+	ErrUnsatisfiableCommitQuorum                                   = errors.New("UnsatisfiableCommitQuorum, code 278")
+	ErrClientDisconnect                                            = errors.New("ClientDisconnect, code 279")
+	ErrChangeStreamFatalError                                      = errors.New("ChangeStreamFatalError, code 280")
+	ErrTransactionCoordinatorSteppingDown                          = errors.New("TransactionCoordinatorSteppingDown, code 281")
+	ErrTransactionCoordinatorReachedAbortDecision                  = errors.New("TransactionCoordinatorReachedAbortDecision, code 282")
+	ErrWouldChangeOwningShard                                      = errors.New("WouldChangeOwningShard, code 283")
+	ErrForTestingErrorExtraInfoWithExtraInfoInNamespace            = errors.New("ForTestingErrorExtraInfoWithExtraInfoInNamespace, code 284")
+	ErrIndexBuildAlreadyInProgress                                 = errors.New("IndexBuildAlreadyInProgress, code 285")
+	ErrChangeStreamHistoryLost                                     = errors.New("ChangeStreamHistoryLost, code 286")
+	ErrTransactionCoordinatorDeadlineTaskCanceled                  = errors.New("TransactionCoordinatorDeadlineTaskCanceled, code 287")
+	ErrChecksumMismatch                                            = errors.New("ChecksumMismatch, code 288")
+	ErrWaitForMajorityServiceEarlierOpTimeAvailable                = errors.New("WaitForMajorityServiceEarlierOpTimeAvailable, code 289")
+	ErrTransactionExceededLifetimeLimitSeconds                     = errors.New("TransactionExceededLifetimeLimitSeconds, code 290")
+	ErrNoQueryExecutionPlans                                       = errors.New("NoQueryExecutionPlans, code 291")
+	ErrQueryExceededMemoryLimitNoDiskUseAllowed                    = errors.New("QueryExceededMemoryLimitNoDiskUseAllowed, code 292")
+	ErrInvalidSeedList                                             = errors.New("InvalidSeedList, code 293")
+	ErrInvalidTopologyType                                         = errors.New("InvalidTopologyType, code 294")
+	ErrInvalidHeartBeatFrequency                                   = errors.New("InvalidHeartBeatFrequency, code 295")
+	ErrTopologySetNameRequired                                     = errors.New("TopologySetNameRequired, code 296")
+	ErrHierarchicalAcquisitionLevelViolation                       = errors.New("HierarchicalAcquisitionLevelViolation, code 297")
+	ErrInvalidServerType                                           = errors.New("InvalidServerType, code 298")
+	ErrOCSPCertificateStatusRevoked                                = errors.New("OCSPCertificateStatusRevoked, code 299")
+	ErrRangeDeletionAbandonedBecauseCollectionWithUUIDDoesNotExist = errors.New("RangeDeletionAbandonedBecauseCollectionWithUUIDDoesNotExist, code 300")
+	ErrDataCorruptionDetected                                      = errors.New("DataCorruptionDetected, code 301")
+	ErrOCSPCertificateStatusUnknown                                = errors.New("OCSPCertificateStatusUnknown, code 302")
+	ErrSplitHorizonChange                                          = errors.New("SplitHorizonChange, code 303")
+	ErrShardInvalidatedForTargeting                                = errors.New("ShardInvalidatedForTargeting, code 304")
+	ErrRangeDeletionAbandonedBecauseTaskDocumentDoesNotExist       = errors.New("RangeDeletionAbandonedBecauseTaskDocumentDoesNotExist, code 307")
+	ErrCurrentConfigNotCommittedYet                                = errors.New("CurrentConfigNotCommittedYet, code 308")
+	ErrExhaustCommandFinished                                      = errors.New("ExhaustCommandFinished, code 309")
+	ErrPeriodicJobIsStopped                                        = errors.New("PeriodicJobIsStopped, code 310")
+	ErrTransactionCoordinatorCanceled                              = errors.New("TransactionCoordinatorCanceled, code 311")
+	ErrOperationIsKilledAndDelisted                                = errors.New("OperationIsKilledAndDelisted, code 312")
+	ErrResumableRangeDeleterDisabled                               = errors.New("ResumableRangeDeleterDisabled, code 313")
+	ErrObjectIsBusy                                                = errors.New("ObjectIsBusy, code 314")
+	ErrTooStaleToSyncFromSource                                    = errors.New("TooStaleToSyncFromSource, code 315")
+	ErrQueryTrialRunCompleted                                      = errors.New("QueryTrialRunCompleted, code 316")
+	ErrConnectionPoolExpired                                       = errors.New("ConnectionPoolExpired, code 317")
+	ErrForTestingOptionalErrorExtraInfo                            = errors.New("ForTestingOptionalErrorExtraInfo, code 318")
+	ErrMovePrimaryInProgress                                       = errors.New("MovePrimaryInProgress, code 319")
+	ErrTenantMigrationConflict                                     = errors.New("TenantMigrationConflict, code 320")
+	ErrTenantMigrationCommitted                                    = errors.New("TenantMigrationCommitted, code 321")
+	ErrAPIVersionError                                             = errors.New("APIVersionError, code 322")
+	ErrAPIStrictError                                              = errors.New("APIStrictError, code 323")
+	ErrAPIDeprecationError                                         = errors.New("APIDeprecationError, code 324")
+	ErrTenantMigrationAborted                                      = errors.New("TenantMigrationAborted, code 325")
+	ErrOplogQueryMinTsMissing                                      = errors.New("OplogQueryMinTsMissing, code 326")
+	ErrNoSuchTenantMigration                                       = errors.New("NoSuchTenantMigration, code 327")
+	ErrTenantMigrationAccessBlockerShuttingDown                    = errors.New("TenantMigrationAccessBlockerShuttingDown, code 328")
+	ErrTenantMigrationInProgress                                   = errors.New("TenantMigrationInProgress, code 329")
+	ErrSkipCommandExecution                                        = errors.New("SkipCommandExecution, code 330")
+	ErrFailedToRunWithReplyBuilder                                 = errors.New("FailedToRunWithReplyBuilder, code 331")
+	ErrCannotDowngrade                                             = errors.New("CannotDowngrade, code 332")
+	ErrServiceExecutorInShutdown                                   = errors.New("ServiceExecutorInShutdown, code 333")
+	ErrMechanismUnavailable                                        = errors.New("MechanismUnavailable, code 334")
+	ErrTenantMigrationForgotten                                    = errors.New("TenantMigrationForgotten, code 335")
+	ErrSocketException                                             = errors.New("SocketException, code 9001")
+	ErrCannotGrowDocumentInCappedNamespace                         = errors.New("CannotGrowDocumentInCappedNamespace, code 10003")
+	ErrNotWritablePrimary                                          = errors.New("NotWritablePrimary, code 10107")
+	ErrBSONObjectTooLarge                                          = errors.New("BSONObjectTooLarge, code 10334")
+	ErrDuplicateKey                                                = errors.New("DuplicateKey, code 11000")
+	ErrInterruptedAtShutdown                                       = errors.New("InterruptedAtShutdown, code 11600")
+	ErrInterrupted                                                 = errors.New("Interrupted, code 11601")
+	ErrInterruptedDueToReplStateChange                             = errors.New("InterruptedDueToReplStateChange, code 11602")
+	ErrBackgroundOperationInProgressForDatabase                    = errors.New("BackgroundOperationInProgressForDatabase, code 12586")
+	ErrBackgroundOperationInProgressForNamespace                   = errors.New("BackgroundOperationInProgressForNamespace, code 12587")
+	ErrMergeStageNoMatchingDocument                                = errors.New("MergeStageNoMatchingDocument, code 13113")
+	ErrDatabaseDifferCase                                          = errors.New("DatabaseDifferCase, code 13297")
+	ErrStaleConfig                                                 = errors.New("StaleConfig, code 13388")
+	ErrNotPrimaryNoSecondaryOk                                     = errors.New("NotPrimaryNoSecondaryOk, code 13435")
+	ErrNotPrimaryOrSecondary                                       = errors.New("NotPrimaryOrSecondary, code 13436")
+	ErrOutOfDiskSpace                                              = errors.New("OutOfDiskSpace, code 14031")
+	ErrClientMarkedKilled                                          = errors.New("ClientMarkedKilled, code 46841")
 )
 
 var errorMap = map[int32]error{
-	1:     InternalError,
-	2:     BadValue,
-	4:     NoSuchKey,
-	5:     GraphContainsCycle,
-	6:     HostUnreachable,
-	7:     HostNotFound,
-	8:     UnknownError,
-	9:     FailedToParse,
-	10:    CannotMutateObject,
-	11:    UserNotFound,
-	12:    UnsupportedFormat,
-	13:    Unauthorized,
-	14:    TypeMismatch,
-	15:    Overflow,
-	16:    InvalidLength,
-	17:    ProtocolError,
-	18:    AuthenticationFailed,
-	19:    CannotReuseObject,
-	20:    IllegalOperation,
-	21:    EmptyArrayOperation,
-	22:    InvalidBSON,
-	23:    AlreadyInitialized,
-	24:    LockTimeout,
-	25:    RemoteValidationError,
-	26:    NamespaceNotFound,
-	27:    IndexNotFound,
-	28:    PathNotViable,
-	29:    NonExistentPath,
-	30:    InvalidPath,
-	31:    RoleNotFound,
-	32:    RolesNotRelated,
-	33:    PrivilegeNotFound,
-	34:    CannotBackfillArray,
-	35:    UserModificationFailed,
-	36:    RemoteChangeDetected,
-	37:    FileRenameFailed,
-	38:    FileNotOpen,
-	39:    FileStreamFailed,
-	40:    ConflictingUpdateOperators,
-	41:    FileAlreadyOpen,
-	42:    LogWriteFailed,
-	43:    CursorNotFound,
-	44:    DuplicateKey,
-	59:    CommandNotFound,
-	61:    ShardKeyNotFound,
-	62:    OplogOperationUnsupported,
-	63:    StaleShardVersion,
-	64:    WriteConcernFailed,
-	65:    MultipleErrorsOccurred,
-	66:    ImmutableField,
-	67:    CannotCreateIndex,
-	68:    IndexAlreadyExists,
-	69:    AuthSchemaIncompatible,
-	70:    ShardNotFound,
-	71:    ReplicaSetNotFound,
-	72:    InvalidOptions,
-	73:    InvalidNamespace,
-	74:    NodeNotFound,
-	75:    WriteConcernLegacyOK,
-	76:    NoReplicationEnabled,
-	77:    OperationIncomplete,
-	78:    CommandResultSchemaViolation,
-	79:    UnknownReplWriteConcern,
-	80:    RoleDataInconsistent,
-	81:    NoMatchParseContext,
-	82:    NoProgressMade,
-	83:    RemoteResultsUnavailable,
-	85:    IndexOptionsConflict,
-	86:    IndexKeySpecsConflict,
-	87:    CannotSplit,
-	89:    NetworkTimeout,
-	90:    CallbackCanceled,
-	91:    ShutdownInProgress,
-	92:    SecondaryAheadOfPrimary,
-	93:    InvalidReplicaSetConfig,
-	94:    NotYetInitialized,
-	95:    NotSecondary,
-	96:    OperationFailed,
-	97:    NoProjectionFound,
-	98:    DBPathInUse,
-	100:   UnsatisfiableWriteConcern,
-	101:   OutdatedClient,
-	102:   IncompatibleAuditMetadata,
-	103:   NewReplicaSetConfigurationIncompatible,
-	104:   NodeNotElectable,
-	105:   IncompatibleShardingMetadata,
-	106:   DistributedClockSkewed,
-	107:   LockFailed,
-	108:   InconsistentReplicaSetNames,
-	109:   ConfigurationInProgress,
-	110:   CannotInitializeNodeWithData,
-	111:   NotExactValueField,
-	112:   WriteConflict,
-	113:   InitialSyncFailure,
-	114:   InitialSyncOplogSourceMissing,
-	115:   CommandNotSupported,
-	116:   DocTooLargeForCapped,
-	117:   ConflictingOperationInProgress,
-	118:   NamespaceNotSharded,
-	119:   InvalidSyncSource,
-	120:   OplogStartMissing,
-	121:   DocumentValidationFailure,
-	123:   NotAReplicaSet,
-	124:   IncompatibleElectionProtocol,
-	125:   CommandFailed,
-	126:   RPCProtocolNegotiationFailed,
-	127:   UnrecoverableRollbackError,
-	128:   LockNotFound,
-	129:   LockStateChangeFailed,
-	130:   SymbolNotFound,
-	133:   FailedToSatisfyReadPreference,
-	134:   ReadConcernMajorityNotAvailableYet,
-	135:   StaleTerm,
-	136:   CappedPositionLost,
-	137:   IncompatibleShardingConfigVersion,
-	138:   RemoteOplogStale,
-	139:   JSInterpreterFailure,
-	140:   InvalidSSLConfiguration,
-	141:   SSLHandshakeFailed,
-	142:   JSUncatchableError,
-	143:   CursorInUse,
-	144:   IncompatibleCatalogManager,
-	145:   PooledConnectionsDropped,
-	146:   ExceededMemoryLimit,
-	147:   ZLibError,
-	148:   ReadConcernMajorityNotEnabled,
-	149:   NoConfigPrimary,
-	150:   StaleEpoch,
-	151:   OperationCannotBeBatched,
-	152:   OplogOutOfOrder,
-	153:   ChunkTooBig,
-	154:   InconsistentShardIdentity,
-	155:   CannotApplyOplogWhilePrimary,
-	157:   CanRepairToDowngrade,
-	158:   MustUpgrade,
-	159:   DurationOverflow,
-	160:   MaxStalenessOutOfRange,
-	161:   IncompatibleCollationVersion,
-	162:   CollectionIsEmpty,
-	163:   ZoneStillInUse,
-	164:   InitialSyncActive,
-	165:   ViewDepthLimitExceeded,
-	166:   CommandNotSupportedOnView,
-	167:   OptionNotSupportedOnView,
-	168:   InvalidPipelineOperator,
-	169:   CommandOnShardedViewNotSupportedOnMongod,
-	170:   TooManyMatchingDocuments,
-	171:   CannotIndexParallelArrays,
-	172:   TransportSessionClosed,
-	173:   TransportSessionNotFound,
-	174:   TransportSessionUnknown,
-	175:   QueryPlanKilled,
-	176:   FileOpenFailed,
-	177:   ZoneNotFound,
-	178:   RangeOverlapConflict,
-	179:   WindowsPdhError,
-	180:   BadPerfCounterPath,
-	181:   AmbiguousIndexKeyPattern,
-	182:   InvalidViewDefinition,
-	183:   ClientMetadataMissingField,
-	184:   ClientMetadataAppNameTooLarge,
-	185:   ClientMetadataDocumentTooLarge,
-	186:   ClientMetadataCannotBeMutated,
-	187:   LinearizableReadConcernError,
-	188:   IncompatibleServerVersion,
-	189:   PrimarySteppedDown,
-	190:   MasterSlaveConnectionFailure,
-	192:   FailPointEnabled,
-	193:   NoShardingEnabled,
-	194:   BalancerInterrupted,
-	195:   ViewPipelineMaxSizeExceeded,
-	197:   InvalidIndexSpecificationOption,
-	199:   ReplicaSetMonitorRemoved,
-	200:   ChunkRangeCleanupPending,
-	201:   CannotBuildIndexKeys,
-	202:   NetworkInterfaceExceededTimeLimit,
-	203:   ShardingStateNotInitialized,
-	204:   TimeProofMismatch,
-	205:   ClusterTimeFailsRateLimiter,
-	206:   NoSuchSession,
-	207:   InvalidUUID,
-	208:   TooManyLocks,
-	209:   StaleClusterTime,
-	210:   CannotVerifyAndSignLogicalTime,
-	211:   KeyNotFound,
-	212:   IncompatibleRollbackAlgorithm,
-	213:   DuplicateSession,
-	214:   AuthenticationRestrictionUnmet,
-	215:   DatabaseDropPending,
-	216:   ElectionInProgress,
-	217:   IncompleteTransactionHistory,
-	218:   UpdateOperationFailed,
-	219:   FTDCPathNotSet,
-	220:   FTDCPathAlreadySet,
-	221:   IndexModified,
-	222:   CloseChangeStream,
-	223:   IllegalOpMsgFlag,
-	224:   QueryFeatureNotAllowed,
-	225:   TransactionTooOld,
-	226:   AtomicityFailure,
-	227:   CannotImplicitlyCreateCollection,
-	228:   SessionTransferIncomplete,
-	229:   MustDowngrade,
-	230:   DNSHostNotFound,
-	231:   DNSProtocolError,
-	232:   MaxSubPipelineDepthExceeded,
-	233:   TooManyDocumentSequences,
-	234:   RetryChangeStream,
-	235:   InternalErrorNotSupported,
-	236:   ForTestingErrorExtraInfo,
-	237:   CursorKilled,
-	238:   NotImplemented,
-	239:   SnapshotTooOld,
-	240:   DNSRecordTypeMismatch,
-	241:   ConversionFailure,
-	242:   CannotCreateCollection,
-	243:   IncompatibleWithUpgradedServer,
-	245:   BrokenPromise,
-	246:   SnapshotUnavailable,
-	247:   ProducerConsumerQueueBatchTooLarge,
-	248:   ProducerConsumerQueueEndClosed,
-	249:   StaleDbVersion,
-	250:   StaleChunkHistory,
-	251:   NoSuchTransaction,
-	252:   ReentrancyNotAllowed,
-	253:   FreeMonHttpInFlight,
-	254:   FreeMonHttpTemporaryFailure,
-	255:   FreeMonHttpPermanentFailure,
-	256:   TransactionCommitted,
-	257:   TransactionTooLarge,
-	258:   UnknownFeatureCompatibilityVersion,
-	259:   KeyedExecutorRetry,
-	260:   InvalidResumeToken,
-	261:   TooManyLogicalSessions,
-	262:   ExceededTimeLimit,
-	263:   OperationNotSupportedInTransaction,
-	264:   TooManyFilesOpen,
-	265:   OrphanedRangeCleanUpFailed,
-	266:   FailPointSetFailed,
-	267:   PreparedTransactionInProgress,
-	268:   CannotBackup,
-	269:   DataModifiedByRepair,
-	270:   RepairedReplicaSetNode,
-	271:   JSInterpreterFailureWithStack,
-	272:   MigrationConflict,
-	273:   ProducerConsumerQueueProducerQueueDepthExceeded,
-	274:   ProducerConsumerQueueConsumed,
-	275:   ExchangePassthrough,
-	276:   IndexBuildAborted,
-	277:   AlarmAlreadyFulfilled,
-	278:   UnsatisfiableCommitQuorum,
-	279:   ClientDisconnect,
-	280:   ChangeStreamFatalError,
-	281:   TransactionCoordinatorSteppingDown,
-	282:   TransactionCoordinatorReachedAbortDecision,
-	283:   WouldChangeOwningShard,
-	284:   ForTestingErrorExtraInfoWithExtraInfoInNamespace,
-	285:   IndexBuildAlreadyInProgress,
-	286:   ChangeStreamHistoryLost,
-	287:   TransactionCoordinatorDeadlineTaskCanceled,
-	288:   ChecksumMismatch,
-	289:   WaitForMajorityServiceEarlierOpTimeAvailable,
-	290:   TransactionExceededLifetimeLimitSeconds,
-	291:   NoQueryExecutionPlans,
-	292:   QueryExceededMemoryLimitNoDiskUseAllowed,
-	293:   InvalidSeedList,
-	294:   InvalidTopologyType,
-	295:   InvalidHeartBeatFrequency,
-	296:   TopologySetNameRequired,
-	297:   HierarchicalAcquisitionLevelViolation,
-	298:   InvalidServerType,
-	299:   OCSPCertificateStatusRevoked,
-	300:   RangeDeletionAbandonedBecauseCollectionWithUUIDDoesNotExist,
-	301:   DataCorruptionDetected,
-	302:   OCSPCertificateStatusUnknown,
-	303:   SplitHorizonChange,
-	304:   ShardInvalidatedForTargeting,
-	307:   RangeDeletionAbandonedBecauseTaskDocumentDoesNotExist,
-	308:   CurrentConfigNotCommittedYet,
-	309:   ExhaustCommandFinished,
-	310:   PeriodicJobIsStopped,
-	311:   TransactionCoordinatorCanceled,
-	312:   OperationIsKilledAndDelisted,
-	313:   ResumableRangeDeleterDisabled,
-	314:   ObjectIsBusy,
-	315:   TooStaleToSyncFromSource,
-	316:   QueryTrialRunCompleted,
-	317:   ConnectionPoolExpired,
-	318:   ForTestingOptionalErrorExtraInfo,
-	319:   MovePrimaryInProgress,
-	320:   TenantMigrationConflict,
-	321:   TenantMigrationCommitted,
-	322:   APIVersionError,
-	323:   APIStrictError,
-	324:   APIDeprecationError,
-	325:   TenantMigrationAborted,
-	326:   OplogQueryMinTsMissing,
-	327:   NoSuchTenantMigration,
-	328:   TenantMigrationAccessBlockerShuttingDown,
-	329:   TenantMigrationInProgress,
-	330:   SkipCommandExecution,
-	331:   FailedToRunWithReplyBuilder,
-	332:   CannotDowngrade,
-	333:   ServiceExecutorInShutdown,
-	334:   MechanismUnavailable,
-	335:   TenantMigrationForgotten,
-	9001:  SocketException,
-	10003: CannotGrowDocumentInCappedNamespace,
-	10107: NotWritablePrimary,
-	10334: BSONObjectTooLarge,
-	11000: DuplicateKey,
-	11600: InterruptedAtShutdown,
-	11601: Interrupted,
-	11602: InterruptedDueToReplStateChange,
-	12586: BackgroundOperationInProgressForDatabase,
-	12587: BackgroundOperationInProgressForNamespace,
-	13113: MergeStageNoMatchingDocument,
-	13297: DatabaseDifferCase,
-	13388: StaleConfig,
-	13435: NotPrimaryNoSecondaryOk,
-	13436: NotPrimaryOrSecondary,
-	14031: OutOfDiskSpace,
-	46841: ClientMarkedKilled,
+	1:     ErrInternalError,
+	2:     ErrBadValue,
+	4:     ErrNoSuchKey,
+	5:     ErrGraphContainsCycle,
+	6:     ErrHostUnreachable,
+	7:     ErrHostNotFound,
+	8:     ErrUnknownError,
+	9:     ErrFailedToParse,
+	10:    ErrCannotMutateObject,
+	11:    ErrUserNotFound,
+	12:    ErrUnsupportedFormat,
+	13:    ErrUnauthorized,
+	14:    ErrTypeMismatch,
+	15:    ErrOverflow,
+	16:    ErrInvalidLength,
+	17:    ErrProtocolError,
+	18:    ErrAuthenticationFailed,
+	19:    ErrCannotReuseObject,
+	20:    ErrIllegalOperation,
+	21:    ErrEmptyArrayOperation,
+	22:    ErrInvalidBSON,
+	23:    ErrAlreadyInitialized,
+	24:    ErrLockTimeout,
+	25:    ErrRemoteValidationError,
+	26:    ErrNamespaceNotFound,
+	27:    ErrIndexNotFound,
+	28:    ErrPathNotViable,
+	29:    ErrNonExistentPath,
+	30:    ErrInvalidPath,
+	31:    ErrRoleNotFound,
+	32:    ErrRolesNotRelated,
+	33:    ErrPrivilegeNotFound,
+	34:    ErrCannotBackfillArray,
+	35:    ErrUserModificationFailed,
+	36:    ErrRemoteChangeDetected,
+	37:    ErrFileRenameFailed,
+	38:    ErrFileNotOpen,
+	39:    ErrFileStreamFailed,
+	40:    ErrConflictingUpdateOperators,
+	41:    ErrFileAlreadyOpen,
+	42:    ErrLogWriteFailed,
+	43:    ErrCursorNotFound,
+	44:    ErrDuplicateKey,
+	59:    ErrCommandNotFound,
+	61:    ErrShardKeyNotFound,
+	62:    ErrOplogOperationUnsupported,
+	63:    ErrStaleShardVersion,
+	64:    ErrWriteConcernFailed,
+	65:    ErrMultipleErrorsOccurred,
+	66:    ErrImmutableField,
+	67:    ErrCannotCreateIndex,
+	68:    ErrIndexAlreadyExists,
+	69:    ErrAuthSchemaIncompatible,
+	70:    ErrShardNotFound,
+	71:    ErrReplicaSetNotFound,
+	72:    ErrInvalidOptions,
+	73:    ErrInvalidNamespace,
+	74:    ErrNodeNotFound,
+	75:    ErrWriteConcernLegacyOK,
+	76:    ErrNoReplicationEnabled,
+	77:    ErrOperationIncomplete,
+	78:    ErrCommandResultSchemaViolation,
+	79:    ErrUnknownReplWriteConcern,
+	80:    ErrRoleDataInconsistent,
+	81:    ErrNoMatchParseContext,
+	82:    ErrNoProgressMade,
+	83:    ErrRemoteResultsUnavailable,
+	85:    ErrIndexOptionsConflict,
+	86:    ErrIndexKeySpecsConflict,
+	87:    ErrCannotSplit,
+	89:    ErrNetworkTimeout,
+	90:    ErrCallbackCanceled,
+	91:    ErrShutdownInProgress,
+	92:    ErrSecondaryAheadOfPrimary,
+	93:    ErrInvalidReplicaSetConfig,
+	94:    ErrNotYetInitialized,
+	95:    ErrNotSecondary,
+	96:    ErrOperationFailed,
+	97:    ErrNoProjectionFound,
+	98:    ErrDBPathInUse,
+	100:   ErrUnsatisfiableWriteConcern,
+	101:   ErrOutdatedClient,
+	102:   ErrIncompatibleAuditMetadata,
+	103:   ErrNewReplicaSetConfigurationIncompatible,
+	104:   ErrNodeNotElectable,
+	105:   ErrIncompatibleShardingMetadata,
+	106:   ErrDistributedClockSkewed,
+	107:   ErrLockFailed,
+	108:   ErrInconsistentReplicaSetNames,
+	109:   ErrConfigurationInProgress,
+	110:   ErrCannotInitializeNodeWithData,
+	111:   ErrNotExactValueField,
+	112:   ErrWriteConflict,
+	113:   ErrInitialSyncFailure,
+	114:   ErrInitialSyncOplogSourceMissing,
+	115:   ErrCommandNotSupported,
+	116:   ErrDocTooLargeForCapped,
+	117:   ErrConflictingOperationInProgress,
+	118:   ErrNamespaceNotSharded,
+	119:   ErrInvalidSyncSource,
+	120:   ErrOplogStartMissing,
+	121:   ErrDocumentValidationFailure,
+	123:   ErrNotAReplicaSet,
+	124:   ErrIncompatibleElectionProtocol,
+	125:   ErrCommandFailed,
+	126:   ErrRPCProtocolNegotiationFailed,
+	127:   ErrUnrecoverableRollbackError,
+	128:   ErrLockNotFound,
+	129:   ErrLockStateChangeFailed,
+	130:   ErrSymbolNotFound,
+	133:   ErrFailedToSatisfyReadPreference,
+	134:   ErrReadConcernMajorityNotAvailableYet,
+	135:   ErrStaleTerm,
+	136:   ErrCappedPositionLost,
+	137:   ErrIncompatibleShardingConfigVersion,
+	138:   ErrRemoteOplogStale,
+	139:   ErrJSInterpreterFailure,
+	140:   ErrInvalidSSLConfiguration,
+	141:   ErrSSLHandshakeFailed,
+	142:   ErrJSUncatchableError,
+	143:   ErrCursorInUse,
+	144:   ErrIncompatibleCatalogManager,
+	145:   ErrPooledConnectionsDropped,
+	146:   ErrExceededMemoryLimit,
+	147:   ErrZLibError,
+	148:   ErrReadConcernMajorityNotEnabled,
+	149:   ErrNoConfigPrimary,
+	150:   ErrStaleEpoch,
+	151:   ErrOperationCannotBeBatched,
+	152:   ErrOplogOutOfOrder,
+	153:   ErrChunkTooBig,
+	154:   ErrInconsistentShardIdentity,
+	155:   ErrCannotApplyOplogWhilePrimary,
+	157:   ErrCanRepairToDowngrade,
+	158:   ErrMustUpgrade,
+	159:   ErrDurationOverflow,
+	160:   ErrMaxStalenessOutOfRange,
+	161:   ErrIncompatibleCollationVersion,
+	162:   ErrCollectionIsEmpty,
+	163:   ErrZoneStillInUse,
+	164:   ErrInitialSyncActive,
+	165:   ErrViewDepthLimitExceeded,
+	166:   ErrCommandNotSupportedOnView,
+	167:   ErrOptionNotSupportedOnView,
+	168:   ErrInvalidPipelineOperator,
+	169:   ErrCommandOnShardedViewNotSupportedOnMongod,
+	170:   ErrTooManyMatchingDocuments,
+	171:   ErrCannotIndexParallelArrays,
+	172:   ErrTransportSessionClosed,
+	173:   ErrTransportSessionNotFound,
+	174:   ErrTransportSessionUnknown,
+	175:   ErrQueryPlanKilled,
+	176:   ErrFileOpenFailed,
+	177:   ErrZoneNotFound,
+	178:   ErrRangeOverlapConflict,
+	179:   ErrWindowsPdhError,
+	180:   ErrBadPerfCounterPath,
+	181:   ErrAmbiguousIndexKeyPattern,
+	182:   ErrInvalidViewDefinition,
+	183:   ErrClientMetadataMissingField,
+	184:   ErrClientMetadataAppNameTooLarge,
+	185:   ErrClientMetadataDocumentTooLarge,
+	186:   ErrClientMetadataCannotBeMutated,
+	187:   ErrLinearizableReadConcernError,
+	188:   ErrIncompatibleServerVersion,
+	189:   ErrPrimarySteppedDown,
+	190:   ErrMasterSlaveConnectionFailure,
+	192:   ErrFailPointEnabled,
+	193:   ErrNoShardingEnabled,
+	194:   ErrBalancerInterrupted,
+	195:   ErrViewPipelineMaxSizeExceeded,
+	197:   ErrInvalidIndexSpecificationOption,
+	199:   ErrReplicaSetMonitorRemoved,
+	200:   ErrChunkRangeCleanupPending,
+	201:   ErrCannotBuildIndexKeys,
+	202:   ErrNetworkInterfaceExceededTimeLimit,
+	203:   ErrShardingStateNotInitialized,
+	204:   ErrTimeProofMismatch,
+	205:   ErrClusterTimeFailsRateLimiter,
+	206:   ErrNoSuchSession,
+	207:   ErrInvalidUUID,
+	208:   ErrTooManyLocks,
+	209:   ErrStaleClusterTime,
+	210:   ErrCannotVerifyAndSignLogicalTime,
+	211:   ErrKeyNotFound,
+	212:   ErrIncompatibleRollbackAlgorithm,
+	213:   ErrDuplicateSession,
+	214:   ErrAuthenticationRestrictionUnmet,
+	215:   ErrDatabaseDropPending,
+	216:   ErrElectionInProgress,
+	217:   ErrIncompleteTransactionHistory,
+	218:   ErrUpdateOperationFailed,
+	219:   ErrFTDCPathNotSet,
+	220:   ErrFTDCPathAlreadySet,
+	221:   ErrIndexModified,
+	222:   ErrCloseChangeStream,
+	223:   ErrIllegalOpMsgFlag,
+	224:   ErrQueryFeatureNotAllowed,
+	225:   ErrTransactionTooOld,
+	226:   ErrAtomicityFailure,
+	227:   ErrCannotImplicitlyCreateCollection,
+	228:   ErrSessionTransferIncomplete,
+	229:   ErrMustDowngrade,
+	230:   ErrDNSHostNotFound,
+	231:   ErrDNSProtocolError,
+	232:   ErrMaxSubPipelineDepthExceeded,
+	233:   ErrTooManyDocumentSequences,
+	234:   ErrRetryChangeStream,
+	235:   ErrInternalErrorNotSupported,
+	236:   ErrForTestingErrorExtraInfo,
+	237:   ErrCursorKilled,
+	238:   ErrNotImplemented,
+	239:   ErrSnapshotTooOld,
+	240:   ErrDNSRecordTypeMismatch,
+	241:   ErrConversionFailure,
+	242:   ErrCannotCreateCollection,
+	243:   ErrIncompatibleWithUpgradedServer,
+	245:   ErrBrokenPromise,
+	246:   ErrSnapshotUnavailable,
+	247:   ErrProducerConsumerQueueBatchTooLarge,
+	248:   ErrProducerConsumerQueueEndClosed,
+	249:   ErrStaleDbVersion,
+	250:   ErrStaleChunkHistory,
+	251:   ErrNoSuchTransaction,
+	252:   ErrReentrancyNotAllowed,
+	253:   ErrFreeMonHttpInFlight,
+	254:   ErrFreeMonHttpTemporaryFailure,
+	255:   ErrFreeMonHttpPermanentFailure,
+	256:   ErrTransactionCommitted,
+	257:   ErrTransactionTooLarge,
+	258:   ErrUnknownFeatureCompatibilityVersion,
+	259:   ErrKeyedExecutorRetry,
+	260:   ErrInvalidResumeToken,
+	261:   ErrTooManyLogicalSessions,
+	262:   ErrExceededTimeLimit,
+	263:   ErrOperationNotSupportedInTransaction,
+	264:   ErrTooManyFilesOpen,
+	265:   ErrOrphanedRangeCleanUpFailed,
+	266:   ErrFailPointSetFailed,
+	267:   ErrPreparedTransactionInProgress,
+	268:   ErrCannotBackup,
+	269:   ErrDataModifiedByRepair,
+	270:   ErrRepairedReplicaSetNode,
+	271:   ErrJSInterpreterFailureWithStack,
+	272:   ErrMigrationConflict,
+	273:   ErrProducerConsumerQueueProducerQueueDepthExceeded,
+	274:   ErrProducerConsumerQueueConsumed,
+	275:   ErrExchangePassthrough,
+	276:   ErrIndexBuildAborted,
+	277:   ErrAlarmAlreadyFulfilled,
+	278:   ErrUnsatisfiableCommitQuorum,
+	279:   ErrClientDisconnect,
+	280:   ErrChangeStreamFatalError,
+	281:   ErrTransactionCoordinatorSteppingDown,
+	282:   ErrTransactionCoordinatorReachedAbortDecision,
+	283:   ErrWouldChangeOwningShard,
+	284:   ErrForTestingErrorExtraInfoWithExtraInfoInNamespace,
+	285:   ErrIndexBuildAlreadyInProgress,
+	286:   ErrChangeStreamHistoryLost,
+	287:   ErrTransactionCoordinatorDeadlineTaskCanceled,
+	288:   ErrChecksumMismatch,
+	289:   ErrWaitForMajorityServiceEarlierOpTimeAvailable,
+	290:   ErrTransactionExceededLifetimeLimitSeconds,
+	291:   ErrNoQueryExecutionPlans,
+	292:   ErrQueryExceededMemoryLimitNoDiskUseAllowed,
+	293:   ErrInvalidSeedList,
+	294:   ErrInvalidTopologyType,
+	295:   ErrInvalidHeartBeatFrequency,
+	296:   ErrTopologySetNameRequired,
+	297:   ErrHierarchicalAcquisitionLevelViolation,
+	298:   ErrInvalidServerType,
+	299:   ErrOCSPCertificateStatusRevoked,
+	300:   ErrRangeDeletionAbandonedBecauseCollectionWithUUIDDoesNotExist,
+	301:   ErrDataCorruptionDetected,
+	302:   ErrOCSPCertificateStatusUnknown,
+	303:   ErrSplitHorizonChange,
+	304:   ErrShardInvalidatedForTargeting,
+	307:   ErrRangeDeletionAbandonedBecauseTaskDocumentDoesNotExist,
+	308:   ErrCurrentConfigNotCommittedYet,
+	309:   ErrExhaustCommandFinished,
+	310:   ErrPeriodicJobIsStopped,
+	311:   ErrTransactionCoordinatorCanceled,
+	312:   ErrOperationIsKilledAndDelisted,
+	313:   ErrResumableRangeDeleterDisabled,
+	314:   ErrObjectIsBusy,
+	315:   ErrTooStaleToSyncFromSource,
+	316:   ErrQueryTrialRunCompleted,
+	317:   ErrConnectionPoolExpired,
+	318:   ErrForTestingOptionalErrorExtraInfo,
+	319:   ErrMovePrimaryInProgress,
+	320:   ErrTenantMigrationConflict,
+	321:   ErrTenantMigrationCommitted,
+	322:   ErrAPIVersionError,
+	323:   ErrAPIStrictError,
+	324:   ErrAPIDeprecationError,
+	325:   ErrTenantMigrationAborted,
+	326:   ErrOplogQueryMinTsMissing,
+	327:   ErrNoSuchTenantMigration,
+	328:   ErrTenantMigrationAccessBlockerShuttingDown,
+	329:   ErrTenantMigrationInProgress,
+	330:   ErrSkipCommandExecution,
+	331:   ErrFailedToRunWithReplyBuilder,
+	332:   ErrCannotDowngrade,
+	333:   ErrServiceExecutorInShutdown,
+	334:   ErrMechanismUnavailable,
+	335:   ErrTenantMigrationForgotten,
+	9001:  ErrSocketException,
+	10003: ErrCannotGrowDocumentInCappedNamespace,
+	10107: ErrNotWritablePrimary,
+	10334: ErrBSONObjectTooLarge,
+	11000: ErrDuplicateKey,
+	11600: ErrInterruptedAtShutdown,
+	11601: ErrInterrupted,
+	11602: ErrInterruptedDueToReplStateChange,
+	12586: ErrBackgroundOperationInProgressForDatabase,
+	12587: ErrBackgroundOperationInProgressForNamespace,
+	13113: ErrMergeStageNoMatchingDocument,
+	13297: ErrDatabaseDifferCase,
+	13388: ErrStaleConfig,
+	13435: ErrNotPrimaryNoSecondaryOk,
+	13436: ErrNotPrimaryOrSecondary,
+	14031: ErrOutOfDiskSpace,
+	46841: ErrClientMarkedKilled,
 }
 
 var mu sync.RWMutex
