@@ -1,10 +1,10 @@
 package mongox
 
 import (
+	"errors"
 	"reflect"
 	"time"
 
-	"github.com/maxbolgarin/errm"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -71,7 +71,7 @@ func diffToUpdates(diff any) (bson.D, error) {
 func processDiffStruct(diff any, parentField string) (map[string]any, error) {
 	req := reflect.ValueOf(diff)
 	if req.Kind() != reflect.Struct {
-		return nil, errm.New("only struct fields are allowed")
+		return nil, errors.New("only struct fields are allowed")
 	}
 
 	upd := make(map[string]any)
@@ -128,7 +128,7 @@ func processDiffStruct(diff any, parentField string) (map[string]any, error) {
 	}
 
 	if len(upd) == 0 {
-		return nil, errm.New("updates are empty")
+		return nil, errors.New("updates are empty")
 	}
 
 	return upd, nil

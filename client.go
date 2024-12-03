@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/maxbolgarin/errm"
 	"github.com/maxbolgarin/gorder"
 	"github.com/maxbolgarin/lang"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -57,12 +56,12 @@ func Connect(ctx context.Context, cfg Config) (*Client, error) {
 	fmt.Println(opts.GetURI())
 
 	if err := opts.Validate(); err != nil {
-		return nil, errm.Wrap(err, "validate opts")
+		return nil, fmt.Errorf("validate options: %w", err)
 	}
 
 	client, err := mongo.Connect(opts)
 	if err != nil {
-		return nil, errm.Wrap(err, "connect")
+		return nil, fmt.Errorf("connect: %w", err)
 	}
 
 	if err := client.Ping(ctx, nil); err != nil {

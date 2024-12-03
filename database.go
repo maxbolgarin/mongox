@@ -2,9 +2,9 @@ package mongox
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
-	"github.com/maxbolgarin/errm"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -50,14 +50,14 @@ func (m *Database) Collection(name string) *Collection {
 func (m *Database) WithTransaction(ctx context.Context, fn func(context.Context) (any, error)) (any, error) {
 	session, err := m.db.Client().StartSession()
 	if err != nil {
-		return nil, errm.Wrap(err, "start session")
+		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
 	}
 	defer session.EndSession(ctx)
 
 	// It commits the transaction.
 	result, err := session.WithTransaction(ctx, fn)
 	if err != nil {
-		return nil, errm.Wrap(err, "transaction")
+		return nil, err
 	}
 
 	return result, nil
