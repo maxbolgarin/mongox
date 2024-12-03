@@ -12,6 +12,7 @@ import (
 )
 
 // Collection handles interactions with a MongoDB collection.
+// It is safe for concurrent use by multiple goroutines.
 type Collection struct {
 	coll *mongo.Collection
 }

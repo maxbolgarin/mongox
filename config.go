@@ -6,6 +6,9 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+// DefaultAsyncRetries is the maximum number of retries for failed tasks in async mode.
+const DefaultAsyncRetries = 10
+
 // Config contains database configuration for creating MongoDB client.
 type Config struct {
 	// AppName that is sent to the server when creating new connections.

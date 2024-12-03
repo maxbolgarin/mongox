@@ -13,9 +13,10 @@ import (
 var (
 	ErrNotFound        = errors.New("not found")
 	ErrDuplicate       = errors.New("duplicate")
+	ErrInvalidArgument = errors.New("invalid client argument")
+	ErrInternal        = errors.New("internal error")
 	ErrNetwork         = errors.New("network error")
 	ErrTimeout         = errors.New("timeout")
-	ErrInvalidArgument = errors.New("invalid client argument")
 	ErrBadServer       = errors.New("bad server")
 )
 
@@ -727,12 +728,14 @@ func handleError(err error) error {
 		errors.Is(err, mongo.ErrMultipleIndexDrop) ||
 		errors.Is(err, mongo.ErrNonStringIndexName) ||
 		errors.Is(err, mongo.ErrNotSlice) ||
-		errors.Is(err, mongo.ErrNilCursor) ||
+		errors.Is(err, mongo.ErrStreamClosed) ||
 		errors.Is(err, mongo.ErrWrongClient):
 		return fmt.Errorf("%w: %v", ErrInvalidArgument, err)
 
 	case errors.Is(err, mongo.ErrMissingChunk) ||
 		errors.Is(err, mongo.ErrMissingGridFSChunkSize) ||
+		errors.Is(err, mongo.ErrWrongSize) ||
+		errors.Is(err, mongo.ErrNilCursor) ||
 		errors.Is(err, mongo.ErrMissingResumeToken):
 		return fmt.Errorf("%w: %v", ErrBadServer, err)
 	}

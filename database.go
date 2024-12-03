@@ -9,6 +9,7 @@ import (
 )
 
 // Database is a database client with open connection that creates collections and handles transactions.
+// It is safe for concurrent use by multiple goroutines.
 type Database struct {
 	db *mongo.Database
 

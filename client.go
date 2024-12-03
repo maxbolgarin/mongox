@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/maxbolgarin/errm"
+	"github.com/maxbolgarin/gorder"
 	"github.com/maxbolgarin/lang"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -14,13 +15,14 @@ import (
 )
 
 // Client is a handle representing a pool of connections to a MongoDB deployment.
-// It is safe for concurrent use by multiple goroutines.
 // The Client type opens and closes connections automatically and maintains a pool of idle connections.
+// It is safe for concurrent use by multiple goroutines.
 type Client struct {
 	client *mongo.Client
 
-	dbs map[string]*Database
-	mu  sync.RWMutex
+	dbs  map[string]*Database
+	adbs map[string]*AsyncDatabase
+	mu   sync.RWMutex
 }
 
 // Connect creates a new MongoDB client with the given configuration.
@@ -105,6 +107,32 @@ func (m *Client) Database(name string) *Database {
 	m.mu.Unlock()
 
 	return db
+}
+
+func (m *Client) AsyncDatabase(ctx context.Context, name string, workers int, logger gorder.Logger) *AsyncDatabase {
+	m.mu.RLock()
+	adb, ok := m.adbs[name]
+	m.mu.RUnlock()
+
+	if ok {
+		return adb
+	}
+
+	adb = &AsyncDatabase{
+		db: m.Database(name),
+		queue: gorder.New[string](ctx, gorder.Options{
+			Workers: workers,
+			Logger:  logger,
+			Retries: DefaultAsyncRetries,
+		}),
+		log: logger,
+	}
+
+	m.mu.Lock()
+	m.adbs[name] = adb
+	m.mu.Unlock()
+
+	return adb
 }
 
 func buildURL(cfg Config) string {
