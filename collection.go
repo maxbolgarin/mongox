@@ -51,6 +51,9 @@ func (m *Collection) CreateTextIndex(ctx context.Context, languageCode string, f
 	if languageCode == "" {
 		languageCode = "en"
 	}
+	if !supportedLanguages[languageCode] {
+		return fmt.Errorf("unsupported language: %s", languageCode)
+	}
 	indexModel := mongo.IndexModel{
 		Options: options.Index().SetDefaultLanguage(languageCode).SetName(
 			m.coll.Name() + "_" + strings.Join(fieldNames, "_") + "_" + languageCode + "_text_index"),
@@ -73,7 +76,8 @@ func (m *Collection) CreateTextIndex(ctx context.Context, languageCode string, f
 }
 
 // FindOne finds one document in the collection using filter.
-func (m *Collection) FindOne(ctx context.Context, dest any, filter F) error {
+// It returns ErrNotFound if no document is found.
+func (m *Collection) FindOne(ctx context.Context, dest any, filter M) error {
 	res := m.coll.FindOne(ctx, filter.Prepare())
 	if err := res.Err(); err != nil {
 		return handleError(err)
@@ -85,7 +89,7 @@ func (m *Collection) FindOne(ctx context.Context, dest any, filter F) error {
 }
 
 // Distinct finds distinct values for the specified field in the collection.
-func (m *Collection) Distinct(ctx context.Context, dest any, field string, filter F) error {
+func (m *Collection) Distinct(ctx context.Context, dest any, field string, filter M) error {
 	res := m.coll.Distinct(ctx, field, filter.Prepare())
 	if err := res.Err(); err != nil {
 		return handleError(err)
@@ -96,18 +100,20 @@ func (m *Collection) Distinct(ctx context.Context, dest any, field string, filte
 	return nil
 }
 
-// FindMany finds many documents in the collection using filter.
-func (m *Collection) FindMany(ctx context.Context, dest any, filter F) error {
+// Find finds many documents in the collection using filter.
+// It does not return any error if no document is found.
+func (m *Collection) Find(ctx context.Context, dest any, filter M) error {
 	return m.find(ctx, dest, filter.Prepare())
 }
 
 // FindAll finds all documents in the collection.
+// It does not return any error if no document is found.
 func (m *Collection) FindAll(ctx context.Context, dest any) error {
 	return m.find(ctx, dest, bson.D{})
 }
 
 // Count counts the number of documents in the collection using filter.
-func (m *Collection) Count(ctx context.Context, filter F) (int64, error) {
+func (m *Collection) Count(ctx context.Context, filter M) (int64, error) {
 	count, err := m.coll.CountDocuments(ctx, filter.Prepare())
 	if err != nil {
 		return 0, handleError(err)
@@ -129,7 +135,7 @@ func (m *Collection) Insert(ctx context.Context, records ...any) (err error) {
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.
-func (m *Collection) Upsert(ctx context.Context, record any, filter F) error {
+func (m *Collection) Upsert(ctx context.Context, record any, filter M) error {
 	opts := options.Replace().SetUpsert(true)
 	_, err := m.coll.ReplaceOne(ctx, filter.Prepare(), record, opts)
 	if err != nil {
@@ -140,17 +146,17 @@ func (m *Collection) Upsert(ctx context.Context, record any, filter F) error {
 
 // SetFields sets fields in a document in the collection using updates map.
 // For example: {key1: value1, key2: value2} becomes {$set: {key1: value1, key2: value2}}
-func (m *Collection) SetFields(ctx context.Context, filter F, update map[string]any) error {
+func (m *Collection) SetFields(ctx context.Context, filter M, update map[string]any) error {
 	return m.updateOne(ctx, filter, prepareUpdates(update, Set))
 }
 
 // UpdateOne updates a document in the collection.
-func (m *Collection) UpdateOne(ctx context.Context, filter, update F) error {
+func (m *Collection) UpdateOne(ctx context.Context, filter, update M) error {
 	return m.updateOne(ctx, filter, update.Prepare())
 }
 
 // UpdateMany updates multi documents in the collection.
-func (m *Collection) UpdateMany(ctx context.Context, filter, update F) error {
+func (m *Collection) UpdateMany(ctx context.Context, filter, update M) error {
 	updateResult, err := m.coll.UpdateMany(ctx, filter.Prepare(), update)
 	if err != nil {
 		return handleError(err)
@@ -162,7 +168,7 @@ func (m *Collection) UpdateMany(ctx context.Context, filter, update F) error {
 }
 
 // UpdateFromDiff sets fields in a document in the collection using diff structure.
-func (m *Collection) UpdateFromDiff(ctx context.Context, filter F, diff any) error {
+func (m *Collection) UpdateFromDiff(ctx context.Context, filter M, diff any) error {
 	update, err := diffToUpdates(diff)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidArgument, err)
@@ -172,7 +178,7 @@ func (m *Collection) UpdateFromDiff(ctx context.Context, filter F, diff any) err
 
 // DeleteFields deletes fields in a document in the collection.
 // For example: [key1, key2] becomes {$unset: {key1: "", key2: ""}}
-func (m *Collection) DeleteFields(ctx context.Context, filter F, fields ...string) error {
+func (m *Collection) DeleteFields(ctx context.Context, filter M, fields ...string) error {
 	updateInfo := make(map[string]any, len(fields))
 	for _, f := range fields {
 		updateInfo[f] = ""
@@ -181,7 +187,7 @@ func (m *Collection) DeleteFields(ctx context.Context, filter F, fields ...strin
 }
 
 // DeleteOne deletes a document in the collection based on the filter.
-func (m *Collection) DeleteOne(ctx context.Context, filter F) error {
+func (m *Collection) DeleteOne(ctx context.Context, filter M) error {
 	_, err := m.coll.DeleteOne(ctx, filter.Prepare())
 	if err != nil {
 		return handleError(err)
@@ -190,7 +196,7 @@ func (m *Collection) DeleteOne(ctx context.Context, filter F) error {
 }
 
 // DeleteMany deletes many documents in the collection based on the filter.
-func (m *Collection) DeleteMany(ctx context.Context, filter F) error {
+func (m *Collection) DeleteMany(ctx context.Context, filter M) error {
 	_, err := m.coll.DeleteMany(ctx, filter.Prepare())
 	if err != nil {
 		return handleError(err)
@@ -216,7 +222,7 @@ func (m *Collection) find(ctx context.Context, dest any, filter bson.D) error {
 	return nil
 }
 
-func (m *Collection) updateOne(ctx context.Context, filter F, update bson.D) error {
+func (m *Collection) updateOne(ctx context.Context, filter M, update bson.D) error {
 	updateResult, err := m.coll.UpdateOne(ctx, filter.Prepare(), update)
 	if err != nil {
 		return handleError(err)

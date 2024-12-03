@@ -15,7 +15,7 @@ func CreateTextIndex(ctx context.Context, coll *Collection, languageCode string,
 }
 
 // FindOne finds one document in the collection using filter.
-func FindOne[T any](ctx context.Context, coll *Collection, filter F) (T, error) {
+func FindOne[T any](ctx context.Context, coll *Collection, filter M) (T, error) {
 	var result T
 	if err := coll.FindOne(ctx, &result, filter); err != nil {
 		return result, err
@@ -24,7 +24,7 @@ func FindOne[T any](ctx context.Context, coll *Collection, filter F) (T, error) 
 }
 
 // Distinct finds distinct values for the specified field in the collection.
-func Distinct[T any](ctx context.Context, coll *Collection, field string, filter F) ([]T, error) {
+func Distinct[T any](ctx context.Context, coll *Collection, field string, filter M) ([]T, error) {
 	var result []T
 	if err := coll.Distinct(ctx, &result, field, filter); err != nil {
 		return result, err
@@ -33,9 +33,9 @@ func Distinct[T any](ctx context.Context, coll *Collection, field string, filter
 }
 
 // FindMany finds many documents in the collection using filter.
-func FindMany[T any](ctx context.Context, coll *Collection, filter F) ([]T, error) {
+func FindMany[T any](ctx context.Context, coll *Collection, filter M) ([]T, error) {
 	var result []T
-	if err := coll.FindMany(ctx, &result, filter); err != nil {
+	if err := coll.Find(ctx, &result, filter); err != nil {
 		return result, err
 	}
 	return result, nil
@@ -51,7 +51,7 @@ func FindAll[T any](ctx context.Context, coll *Collection) ([]T, error) {
 }
 
 // Count counts the number of documents in the collection using filter.
-func Count(ctx context.Context, coll *Collection, filter F) (int64, error) {
+func Count(ctx context.Context, coll *Collection, filter M) (int64, error) {
 	return coll.Count(ctx, filter)
 }
 
@@ -61,41 +61,41 @@ func Insert(ctx context.Context, coll *Collection, record ...any) error {
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.
-func Upsert(ctx context.Context, coll *Collection, record any, filter F) error {
+func Upsert(ctx context.Context, coll *Collection, record any, filter M) error {
 	return coll.Upsert(ctx, record, filter)
 }
 
 // SetFields sets fields in a document in the collection using updates map.
-func SetFields(ctx context.Context, coll *Collection, filter F, update map[string]any) error {
+func SetFields(ctx context.Context, coll *Collection, filter M, update map[string]any) error {
 	return coll.SetFields(ctx, filter, update)
 }
 
 // UpdateOne updates a document in the collection.
-func UpdateOne(ctx context.Context, coll *Collection, filter, update F) error {
+func UpdateOne(ctx context.Context, coll *Collection, filter, update M) error {
 	return coll.UpdateOne(ctx, filter, update)
 }
 
 // UpdateMany updates multi documents in the collection.
-func UpdateMany(ctx context.Context, coll *Collection, filter, update F) error {
+func UpdateMany(ctx context.Context, coll *Collection, filter, update M) error {
 	return coll.UpdateMany(ctx, filter, update)
 }
 
 // UpdateFromDiff sets fields in a document in the collection using diff structure.
-func UpdateFromDiff(ctx context.Context, coll *Collection, filter F, diff any) error {
+func UpdateFromDiff(ctx context.Context, coll *Collection, filter M, diff any) error {
 	return coll.UpdateFromDiff(ctx, filter, diff)
 }
 
 // DeleteFields deletes fields in a document in the collection.
-func DeleteFields(ctx context.Context, coll *Collection, filter F, fields ...string) error {
+func DeleteFields(ctx context.Context, coll *Collection, filter M, fields ...string) error {
 	return coll.DeleteFields(ctx, filter, fields...)
 }
 
 // DeleteOne deletes a document in the collection based on the filter.
-func DeleteOne(ctx context.Context, coll *Collection, filter F) error {
+func DeleteOne(ctx context.Context, coll *Collection, filter M) error {
 	return coll.DeleteOne(ctx, filter)
 }
 
 // DeleteMany deletes documents in the collection based on the filter.
-func DeleteMany(ctx context.Context, coll *Collection, filter F) error {
+func DeleteMany(ctx context.Context, coll *Collection, filter M) error {
 	return coll.DeleteMany(ctx, filter)
 }

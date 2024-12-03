@@ -8,23 +8,23 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-// F is a map containing query operators to filter documents.
-type F map[string]any
+// M is a map containing query operators to filter documents.
+type M map[string]any
 
-// NewF creates a new Filter based on pairs.
+// NewM creates a new Filter based on pairs.
 // Pairs must be in the form NewF(key1, value1, key2, value2, ...)
-func NewF(pairs ...any) F {
+func NewM(pairs ...any) M {
 	return newMapFromPairs(pairs...)
 }
 
 // Add adds pairs to the Filter.
-func (f F) Add(pairs ...any) F {
+func (f M) Add(pairs ...any) M {
 	addPairs(f, pairs...)
 	return f
 }
 
 // Prepare returns a bson.D representation of the Filter that can be used in a MongoDB query.
-func (f F) Prepare() bson.D {
+func (f M) Prepare() bson.D {
 	filter := make(bson.D, 0, len(f))
 	for k, v := range f {
 		filter = append(filter, bson.E{Key: k, Value: v})
@@ -33,7 +33,7 @@ func (f F) Prepare() bson.D {
 }
 
 // String returns a string representation of the Filter.
-func (f F) String() string {
+func (f M) String() string {
 	return f.Prepare().String()
 }
 

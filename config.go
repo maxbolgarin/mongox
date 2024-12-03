@@ -6,9 +6,6 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-// DefaultAsyncRetries is the maximum number of retries for failed tasks in async mode.
-const DefaultAsyncRetries = 10
-
 // Config contains database configuration for creating MongoDB client.
 type Config struct {
 	// AppName that is sent to the server when creating new connections.
@@ -233,4 +230,37 @@ func (cfg *Config) Read(fileName ...string) error {
 		return cleanenv.ReadConfig(fileName[0], cfg)
 	}
 	return cleanenv.ReadEnv(cfg)
+}
+
+var supportedLanguages = map[string]bool{
+	"danish":     true,
+	"da":         true,
+	"dutch":      true,
+	"nl":         true,
+	"english":    true,
+	"en":         true,
+	"finnish":    true,
+	"fi":         true,
+	"french":     true,
+	"fr":         true,
+	"german":     true,
+	"de":         true,
+	"hungarian":  true,
+	"hu":         true,
+	"italian":    true,
+	"it":         true,
+	"norwegian":  true,
+	"nb":         true,
+	"portuguese": true,
+	"pt":         true,
+	"romanian":   true,
+	"ro":         true,
+	"russian":    true,
+	"ru":         true,
+	"spanish":    true,
+	"es":         true,
+	"swedish":    true,
+	"sv":         true,
+	"turkish":    true,
+	"tr":         true,
 }

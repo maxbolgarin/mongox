@@ -53,8 +53,6 @@ func Connect(ctx context.Context, cfg Config) (*Client, error) {
 		opts.SetBSONOptions(buildBSONOptions(cfg))
 	}
 
-	fmt.Println(opts.GetURI())
-
 	if err := opts.Validate(); err != nil {
 		return nil, fmt.Errorf("validate options: %w", err)
 	}
@@ -84,6 +82,11 @@ func (m *Client) Disconnect(ctx context.Context) error {
 // Client returns the underlying mongo client.
 func (m *Client) Client() *mongo.Client {
 	return m.client
+}
+
+// Ping sends a ping command to verify that the client can connect to the deployment.
+func (m *Client) Ping(ctx context.Context) error {
+	return m.client.Ping(ctx, nil)
 }
 
 // Database returns a handle to a database.
