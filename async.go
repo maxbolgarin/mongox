@@ -53,6 +53,7 @@ func (m *AsyncDatabase) AsyncCollection(name string) *AsyncCollection {
 
 // WithTransaction executes a transaction asynchronously.
 // It will create a new session and execute a function inside a transaction.
+// Warning! Transactions in MongoDB is available only for replica sets or Sharded Clusters, not for standalone servers.
 func (m *AsyncDatabase) WithTransaction(queueKey, taskName string, fn func(ctx context.Context) error) {
 	if queueKey == "" {
 		queueKey = m.db.db.Name()
@@ -105,6 +106,15 @@ func (ac *AsyncCollection) Insert(queueKey, taskName string, records ...any) {
 func (ac *AsyncCollection) Upsert(queueKey, taskName string, record any, filter M) {
 	ac.push(queueKey, taskName, "upsert", func(ctx context.Context) error {
 		return ac.coll.Upsert(ctx, record, filter)
+	})
+}
+
+// Replace replaces a document in the collection asynchronously without waiting for it to complete.
+// It start retrying in case of error for DefaultAsyncRetries times.
+// It filters errors and won't retry in case of ErrNotFound, ErrDuplicate and ErrInvalidArgument.
+func (ac *AsyncCollection) Replace(queueKey, taskName string, record any, filter M) {
+	ac.push(queueKey, taskName, "replace", func(ctx context.Context) error {
+		return ac.coll.Replace(ctx, record, filter)
 	})
 }
 
@@ -181,7 +191,7 @@ func (ac *AsyncCollection) handleRetryError(err error) error {
 
 	switch {
 	case errors.Is(err, ErrNotFound):
-		// ErrNotFound is read error, it doesn't change state of the document and it can be throw
+		// ErrNotFound is read error, it doesn't change state of the document and it can be throwed
 		ac.log.Error("document not found", "error", err, "collection", ac.coll.coll.Name(), "flow", "async")
 		return nil
 
@@ -190,7 +200,10 @@ func (ac *AsyncCollection) handleRetryError(err error) error {
 		ac.log.Error("duplicate key error", "error", err, "collection", ac.coll.coll.Name(), "flow", "async")
 		return nil
 
-	case errors.Is(err, ErrInvalidArgument) || errors.Is(err, ErrBadValue) || errors.Is(err, ErrIndexNotFound):
+	case errors.Is(err, ErrInvalidArgument) ||
+		errors.Is(err, ErrBadValue) ||
+		errors.Is(err, ErrIndexNotFound) ||
+		errors.Is(err, ErrIllegalOperation):
 		// ErrInvalidArgument means error with using mongo interface
 		// It is a persistent error and there is no sense to retry
 		ac.log.Error("invalid argument error", "error", err, "collection", ac.coll.coll.Name(), "flow", "async")

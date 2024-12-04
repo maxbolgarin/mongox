@@ -11,13 +11,14 @@ import (
 
 // Common errors
 var (
-	ErrNotFound        = errors.New("not found")
-	ErrDuplicate       = errors.New("duplicate")
-	ErrInvalidArgument = errors.New("invalid client argument")
-	ErrInternal        = errors.New("internal error")
-	ErrNetwork         = errors.New("network error")
-	ErrTimeout         = errors.New("timeout")
-	ErrBadServer       = errors.New("bad server")
+	ErrNotFound            = errors.New("not found")
+	ErrDuplicate           = errors.New("duplicate")
+	ErrInvalidArgument     = errors.New("invalid client argument")
+	ErrInternal            = errors.New("internal error")
+	ErrNetwork             = errors.New("network error")
+	ErrTimeout             = errors.New("timeout")
+	ErrBadServer           = errors.New("bad server")
+	ErrUnsupportedLanguage = errors.New("unsupported language")
 )
 
 // Mongo errors from codes

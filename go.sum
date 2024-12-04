@@ -44,6 +44,8 @@ github.com/maxbolgarin/gorder v1.1.0 h1:xCfbDMsYmzJcMh4mt4e478IQuozn5vxVWMqjlr3C
 github.com/maxbolgarin/gorder v1.1.0/go.mod h1:MHFdJegeAzo9x9WnwZ8tm2smLPBnY/Th3dhvt54OaUU=
 github.com/maxbolgarin/lang v1.6.0 h1:hH8vwzyOmpjidfvqr7FJtI1h/yTHY8JnotcYDRDMyFw=
 github.com/maxbolgarin/lang v1.6.0/go.mod h1:gZyHWP6Odm4E4ow7ebyaD7TCoZsuQyXh30zk8g7lmXc=
+github.com/maxbolgarin/lang v1.7.0 h1:3pgVrnBHndmZsQo/KrsZZ7lFLGepiPJQPy4xxc78fA4=
+github.com/maxbolgarin/lang v1.7.0/go.mod h1:gZyHWP6Odm4E4ow7ebyaD7TCoZsuQyXh30zk8g7lmXc=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/moby/docker-image-spec v1.3.1 h1:jMKff3w6PgbfSa69GfNg+zN/XLhfXJGnEx3Nl2EsFP0=

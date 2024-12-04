@@ -32,17 +32,17 @@ func Connect(ctx context.Context, cfg Config) (*Client, error) {
 		opts = options.Client().ApplyURI(cfg.URI)
 	}
 
-	lang.If(cfg.AppName != "", opts.SetAppName(cfg.AppName), nil)
-	lang.If(cfg.ReplicaSetName != "", opts.SetReplicaSet(cfg.ReplicaSetName), nil)
-	lang.If(cfg.Compressors != nil, opts.SetCompressors(cfg.Compressors), nil)
+	lang.IfV(cfg.AppName, func() { opts.SetAppName(cfg.AppName) })
+	lang.IfV(cfg.ReplicaSetName, func() { opts.SetReplicaSet(cfg.ReplicaSetName) })
+	lang.IfF(len(cfg.Compressors) > 0, func() { opts.SetCompressors(cfg.Compressors) })
 
 	if cfg.Connection != nil {
-		lang.If(cfg.Connection.ConnectTimeout != nil, opts.SetConnectTimeout(*cfg.Connection.ConnectTimeout), nil)
-		lang.If(cfg.Connection.MaxConnIdleTime != nil, opts.SetMaxConnIdleTime(*cfg.Connection.MaxConnIdleTime), nil)
-		lang.If(cfg.Connection.MaxConnecting != nil, opts.SetMaxConnecting(*cfg.Connection.MaxConnecting), nil)
-		lang.If(cfg.Connection.MaxPoolSize != nil, opts.SetMaxPoolSize(*cfg.Connection.MaxPoolSize), nil)
-		lang.If(cfg.Connection.MinPoolSize != nil, opts.SetMinPoolSize(*cfg.Connection.MinPoolSize), nil)
-		lang.If(cfg.Connection.IsDirect, opts.SetDirect(cfg.Connection.IsDirect), nil)
+		lang.IfV(cfg.Connection.ConnectTimeout, func() { opts.SetConnectTimeout(*cfg.Connection.ConnectTimeout) })
+		lang.IfV(cfg.Connection.MaxConnIdleTime, func() { opts.SetMaxConnIdleTime(*cfg.Connection.MaxConnIdleTime) })
+		lang.IfV(cfg.Connection.MaxConnecting, func() { opts.SetMaxConnecting(*cfg.Connection.MaxConnecting) })
+		lang.IfV(cfg.Connection.MaxPoolSize, func() { opts.SetMaxPoolSize(*cfg.Connection.MaxPoolSize) })
+		lang.IfV(cfg.Connection.MinPoolSize, func() { opts.SetMinPoolSize(*cfg.Connection.MinPoolSize) })
+		lang.IfV(cfg.Connection.IsDirect, func() { opts.SetDirect(cfg.Connection.IsDirect) })
 	}
 
 	if cfg.Auth != nil {

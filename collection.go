@@ -52,7 +52,7 @@ func (m *Collection) CreateTextIndex(ctx context.Context, languageCode string, f
 		languageCode = "en"
 	}
 	if !supportedLanguages[languageCode] {
-		return fmt.Errorf("unsupported language: %s", languageCode)
+		return fmt.Errorf("%w: %s", ErrUnsupportedLanguage, languageCode)
 	}
 	indexModel := mongo.IndexModel{
 		Options: options.Index().SetDefaultLanguage(languageCode).SetName(
@@ -135,27 +135,47 @@ func (m *Collection) Insert(ctx context.Context, records ...any) (err error) {
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.
+// It returns ErrNotFound if no document is updated.
 func (m *Collection) Upsert(ctx context.Context, record any, filter M) error {
 	opts := options.Replace().SetUpsert(true)
-	_, err := m.coll.ReplaceOne(ctx, filter.Prepare(), record, opts)
+	upd, err := m.coll.ReplaceOne(ctx, filter.Prepare(), record, opts)
 	if err != nil {
 		return handleError(err)
+	}
+	if upd != nil && upd.MatchedCount == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// Replace replaces a document in the collection.
+// It returns ErrNotFound if no document is updated.
+func (m *Collection) Replace(ctx context.Context, record any, filter M) error {
+	upd, err := m.coll.ReplaceOne(ctx, filter.Prepare(), record)
+	if err != nil {
+		return handleError(err)
+	}
+	if upd != nil && upd.MatchedCount == 0 {
+		return ErrNotFound
 	}
 	return nil
 }
 
 // SetFields sets fields in a document in the collection using updates map.
 // For example: {key1: value1, key2: value2} becomes {$set: {key1: value1, key2: value2}}
+// It returns ErrNotFound if no document is updated.
 func (m *Collection) SetFields(ctx context.Context, filter M, update map[string]any) error {
 	return m.updateOne(ctx, filter, prepareUpdates(update, Set))
 }
 
 // UpdateOne updates a document in the collection.
+// It returns ErrNotFound if no document is updated.
 func (m *Collection) UpdateOne(ctx context.Context, filter, update M) error {
 	return m.updateOne(ctx, filter, update.Prepare())
 }
 
 // UpdateMany updates multi documents in the collection.
+// It returns ErrNotFound if no document is updated.
 func (m *Collection) UpdateMany(ctx context.Context, filter, update M) error {
 	updateResult, err := m.coll.UpdateMany(ctx, filter.Prepare(), update)
 	if err != nil {
@@ -168,6 +188,7 @@ func (m *Collection) UpdateMany(ctx context.Context, filter, update M) error {
 }
 
 // UpdateFromDiff sets fields in a document in the collection using diff structure.
+// It returns ErrNotFound if no document is updated.
 func (m *Collection) UpdateFromDiff(ctx context.Context, filter M, diff any) error {
 	update, err := diffToUpdates(diff)
 	if err != nil {
@@ -177,7 +198,8 @@ func (m *Collection) UpdateFromDiff(ctx context.Context, filter M, diff any) err
 }
 
 // DeleteFields deletes fields in a document in the collection.
-// For example: [key1, key2] becomes {$unset: {key1: "", key2: ""}}
+// For example: [key1, key2] becomes {$unset: {key1: "", key2: ""}}.
+// It returns ErrNotFound if no document is updated.
 func (m *Collection) DeleteFields(ctx context.Context, filter M, fields ...string) error {
 	updateInfo := make(map[string]any, len(fields))
 	for _, f := range fields {
@@ -187,19 +209,27 @@ func (m *Collection) DeleteFields(ctx context.Context, filter M, fields ...strin
 }
 
 // DeleteOne deletes a document in the collection based on the filter.
+// It returns ErrNotFound if no document is deleted.
 func (m *Collection) DeleteOne(ctx context.Context, filter M) error {
-	_, err := m.coll.DeleteOne(ctx, filter.Prepare())
+	del, err := m.coll.DeleteOne(ctx, filter.Prepare())
 	if err != nil {
 		return handleError(err)
+	}
+	if del != nil && del.DeletedCount == 0 {
+		return ErrNotFound
 	}
 	return nil
 }
 
 // DeleteMany deletes many documents in the collection based on the filter.
+// It returns ErrNotFound if no document is deleted.
 func (m *Collection) DeleteMany(ctx context.Context, filter M) error {
-	_, err := m.coll.DeleteMany(ctx, filter.Prepare())
+	del, err := m.coll.DeleteMany(ctx, filter.Prepare())
 	if err != nil {
 		return handleError(err)
+	}
+	if del != nil && del.DeletedCount == 0 {
+		return ErrNotFound
 	}
 	return nil
 }

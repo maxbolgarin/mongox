@@ -15,6 +15,7 @@ func CreateTextIndex(ctx context.Context, coll *Collection, languageCode string,
 }
 
 // FindOne finds one document in the collection using filter.
+// It returns ErrNotFound if no document is found.
 func FindOne[T any](ctx context.Context, coll *Collection, filter M) (T, error) {
 	var result T
 	if err := coll.FindOne(ctx, &result, filter); err != nil {
@@ -32,8 +33,8 @@ func Distinct[T any](ctx context.Context, coll *Collection, field string, filter
 	return result, nil
 }
 
-// FindMany finds many documents in the collection using filter.
-func FindMany[T any](ctx context.Context, coll *Collection, filter M) ([]T, error) {
+// Find finds many documents in the collection using filter.
+func Find[T any](ctx context.Context, coll *Collection, filter M) ([]T, error) {
 	var result []T
 	if err := coll.Find(ctx, &result, filter); err != nil {
 		return result, err
@@ -61,41 +62,55 @@ func Insert(ctx context.Context, coll *Collection, record ...any) error {
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.
+// It returns ErrNotFound if no document is updated.
 func Upsert(ctx context.Context, coll *Collection, record any, filter M) error {
 	return coll.Upsert(ctx, record, filter)
 }
 
+// Replace replaces a document in the collection.
+// It returns ErrNotFound if no document is updated.
+func Replace(ctx context.Context, coll *Collection, record any, filter M) error {
+	return coll.Replace(ctx, record, filter)
+}
+
 // SetFields sets fields in a document in the collection using updates map.
+// It returns ErrNotFound if no document is updated.
 func SetFields(ctx context.Context, coll *Collection, filter M, update map[string]any) error {
 	return coll.SetFields(ctx, filter, update)
 }
 
 // UpdateOne updates a document in the collection.
+// It returns ErrNotFound if no document is updated.
 func UpdateOne(ctx context.Context, coll *Collection, filter, update M) error {
 	return coll.UpdateOne(ctx, filter, update)
 }
 
 // UpdateMany updates multi documents in the collection.
+// It returns ErrNotFound if no document is updated.
 func UpdateMany(ctx context.Context, coll *Collection, filter, update M) error {
 	return coll.UpdateMany(ctx, filter, update)
 }
 
 // UpdateFromDiff sets fields in a document in the collection using diff structure.
+// It returns ErrNotFound if no document is updated.
 func UpdateFromDiff(ctx context.Context, coll *Collection, filter M, diff any) error {
 	return coll.UpdateFromDiff(ctx, filter, diff)
 }
 
 // DeleteFields deletes fields in a document in the collection.
+// It returns ErrNotFound if no document is updated.
 func DeleteFields(ctx context.Context, coll *Collection, filter M, fields ...string) error {
 	return coll.DeleteFields(ctx, filter, fields...)
 }
 
 // DeleteOne deletes a document in the collection based on the filter.
+// It returns ErrNotFound if no document is deleted.
 func DeleteOne(ctx context.Context, coll *Collection, filter M) error {
 	return coll.DeleteOne(ctx, filter)
 }
 
 // DeleteMany deletes documents in the collection based on the filter.
+// It returns ErrNotFound if no document is deleted.
 func DeleteMany(ctx context.Context, coll *Collection, filter M) error {
 	return coll.DeleteMany(ctx, filter)
 }

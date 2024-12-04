@@ -47,6 +47,7 @@ func (m *Database) Collection(name string) *Collection {
 // WithTransaction executes a transaction.
 // It will create a new session and execute a function inside a transaction.
 // The fn callback may be run multiple times during WithTransaction due to retry attempts, so it must be idempotent.
+// Warning! Transactions in MongoDB is available only for replica sets or Sharded Clusters, not for standalone servers.
 func (m *Database) WithTransaction(ctx context.Context, fn func(context.Context) (any, error)) (any, error) {
 	session, err := m.db.Client().StartSession()
 	if err != nil {

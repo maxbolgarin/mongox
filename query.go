@@ -9,7 +9,7 @@ import (
 )
 
 // M is a map containing query operators to filter documents.
-type M map[string]any
+type M bson.M
 
 // NewM creates a new Filter based on pairs.
 // Pairs must be in the form NewF(key1, value1, key2, value2, ...)
