@@ -13,7 +13,7 @@ import (
 var (
 	ErrNotFound            = errors.New("not found")
 	ErrDuplicate           = errors.New("duplicate")
-	ErrInvalidArgument     = errors.New("invalid client argument")
+	ErrInvalidArgument     = errors.New("invalid argument")
 	ErrInternal            = errors.New("internal error")
 	ErrNetwork             = errors.New("network error")
 	ErrTimeout             = errors.New("timeout")
@@ -717,7 +717,8 @@ func handleError(err error) error {
 	case mongo.IsTimeout(err):
 		return fmt.Errorf("%w: %v", ErrTimeout, err)
 
-	case strings.Contains(err.Error(), "must be a pointer to") ||
+	case strings.Contains(err.Error(), "must be a pointer") ||
+		strings.Contains(err.Error(), "update document must have") ||
 		strings.Contains(err.Error(), "DocumentSequence"):
 		return fmt.Errorf("%w: %v", ErrInvalidArgument, err)
 

@@ -24,15 +24,6 @@ func FindOne[T any](ctx context.Context, coll *Collection, filter M) (T, error) 
 	return result, nil
 }
 
-// Distinct finds distinct values for the specified field in the collection.
-func Distinct[T any](ctx context.Context, coll *Collection, field string, filter M) ([]T, error) {
-	var result []T
-	if err := coll.Distinct(ctx, &result, field, filter); err != nil {
-		return result, err
-	}
-	return result, nil
-}
-
 // Find finds many documents in the collection using filter.
 func Find[T any](ctx context.Context, coll *Collection, filter M) ([]T, error) {
 	var result []T
@@ -56,6 +47,15 @@ func Count(ctx context.Context, coll *Collection, filter M) (int64, error) {
 	return coll.Count(ctx, filter)
 }
 
+// Distinct finds distinct values for the specified field in the collection.
+func Distinct[T any](ctx context.Context, coll *Collection, field string, filter M) ([]T, error) {
+	var result []T
+	if err := coll.Distinct(ctx, &result, field, filter); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
 // Insert inserts a document(s) into the collection.
 func Insert(ctx context.Context, coll *Collection, record ...any) error {
 	return coll.Insert(ctx, record...)
@@ -67,10 +67,10 @@ func Upsert(ctx context.Context, coll *Collection, record any, filter M) error {
 	return coll.Upsert(ctx, record, filter)
 }
 
-// Replace replaces a document in the collection.
+// ReplaceOne replaces a document in the collection.
 // It returns ErrNotFound if no document is updated.
-func Replace(ctx context.Context, coll *Collection, record any, filter M) error {
-	return coll.Replace(ctx, record, filter)
+func ReplaceOne(ctx context.Context, coll *Collection, record any, filter M) error {
+	return coll.ReplaceOne(ctx, record, filter)
 }
 
 // SetFields sets fields in a document in the collection using updates map.

@@ -109,12 +109,12 @@ func (ac *AsyncCollection) Upsert(queueKey, taskName string, record any, filter 
 	})
 }
 
-// Replace replaces a document in the collection asynchronously without waiting for it to complete.
+// ReplaceOne replaces a document in the collection asynchronously without waiting for it to complete.
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate and ErrInvalidArgument.
-func (ac *AsyncCollection) Replace(queueKey, taskName string, record any, filter M) {
+func (ac *AsyncCollection) ReplaceOne(queueKey, taskName string, record any, filter M) {
 	ac.push(queueKey, taskName, "replace", func(ctx context.Context) error {
-		return ac.coll.Replace(ctx, record, filter)
+		return ac.coll.ReplaceOne(ctx, record, filter)
 	})
 }
 
