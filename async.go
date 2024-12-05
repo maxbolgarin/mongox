@@ -128,6 +128,7 @@ func (ac *AsyncCollection) SetFields(queueKey, taskName string, filter M, update
 }
 
 // UpdateOne updates a document in the collection asynchronously without waiting for it to complete.
+// Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate and ErrInvalidArgument.
 func (ac *AsyncCollection) UpdateOne(queueKey, taskName string, filter, update M) {
@@ -137,6 +138,7 @@ func (ac *AsyncCollection) UpdateOne(queueKey, taskName string, filter, update M
 }
 
 // UpdateMany updates multi documents in the collection asynchronously without waiting for them to complete.
+// Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate and ErrInvalidArgument.
 func (ac *AsyncCollection) UpdateMany(queueKey, taskName string, filter, update M) {
@@ -203,6 +205,8 @@ func (ac *AsyncCollection) handleRetryError(err error) error {
 	case errors.Is(err, ErrInvalidArgument) ||
 		errors.Is(err, ErrBadValue) ||
 		errors.Is(err, ErrIndexNotFound) ||
+		errors.Is(err, ErrFailedToParse) ||
+		errors.Is(err, ErrTypeMismatch) ||
 		errors.Is(err, ErrIllegalOperation):
 		// ErrInvalidArgument means error with using mongo interface
 		// It is a persistent error and there is no sense to retry

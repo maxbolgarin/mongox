@@ -16,27 +16,27 @@ func CreateTextIndex(ctx context.Context, coll *Collection, languageCode string,
 
 // FindOne finds one document in the collection using filter.
 // It returns ErrNotFound if no document is found.
-func FindOne[T any](ctx context.Context, coll *Collection, filter M) (T, error) {
+func FindOne[T any](ctx context.Context, coll *Collection, filter M, opts ...FindOptions) (T, error) {
 	var result T
-	if err := coll.FindOne(ctx, &result, filter); err != nil {
+	if err := coll.FindOne(ctx, &result, filter, opts...); err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
 // Find finds many documents in the collection using filter.
-func Find[T any](ctx context.Context, coll *Collection, filter M) ([]T, error) {
+func Find[T any](ctx context.Context, coll *Collection, filter M, opts ...FindOptions) ([]T, error) {
 	var result []T
-	if err := coll.Find(ctx, &result, filter); err != nil {
+	if err := coll.Find(ctx, &result, filter, opts...); err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
 // FindAll finds all documents in the collection.
-func FindAll[T any](ctx context.Context, coll *Collection) ([]T, error) {
+func FindAll[T any](ctx context.Context, coll *Collection, opts ...FindOptions) ([]T, error) {
 	var result []T
-	if err := coll.FindAll(ctx, &result); err != nil {
+	if err := coll.FindAll(ctx, &result, opts...); err != nil {
 		return result, err
 	}
 	return result, nil
@@ -80,12 +80,16 @@ func SetFields(ctx context.Context, coll *Collection, filter M, update map[strin
 }
 
 // UpdateOne updates a document in the collection.
+// Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}.
+// Modifiers operate on fields. For example: {$mod: {<field>: ...}}.
 // It returns ErrNotFound if no document is updated.
 func UpdateOne(ctx context.Context, coll *Collection, filter, update M) error {
 	return coll.UpdateOne(ctx, filter, update)
 }
 
 // UpdateMany updates multi documents in the collection.
+// Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}.
+// Modifiers operate on fields. For example: {$mod: {<field>: ...}}.
 // It returns ErrNotFound if no document is updated.
 func UpdateMany(ctx context.Context, coll *Collection, filter, update M) error {
 	return coll.UpdateMany(ctx, filter, update)

@@ -11,6 +11,24 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
+// FindOptions is used to configure a Find operation.
+type FindOptions struct {
+	// Sets a limit of documents returned in the result set.
+	// No-op in FindOne.
+	Limit int
+	// How many documents to skip before returning the first document in the result set.
+	Skip int
+	// The order of the documents returned in the result set. Fields specified in the sort, must have an index.
+	// Example: mongox.M{"name": 1} - sort by name in ascending order.
+	Sort M
+	// For queries against a sharded collection, allows the command to return partial results,
+	// rather than an error, if one or more queried shards are unavailable.
+	AllowPartialResults bool
+	// Whether or not pipelines that require more than 100 megabytes of memory to execute write to temporary files on disk.
+	// No-op in FindOne.
+	AllowDiskUse bool
+}
+
 // Collection handles interactions with a MongoDB collection.
 // It is safe for concurrent use by multiple goroutines.
 type Collection struct {
@@ -23,6 +41,7 @@ func (m *Collection) Collection() *mongo.Collection {
 }
 
 // CreateIndex creates an index for a collection with the given field names.
+// Field names are required and must be unique.
 func (m *Collection) CreateIndex(ctx context.Context, isUnique bool, fieldNames ...string) error {
 	if len(fieldNames) == 0 {
 		return fmt.Errorf("%w: no field names provided", ErrInvalidArgument)
@@ -43,13 +62,14 @@ func (m *Collection) CreateIndex(ctx context.Context, isUnique bool, fieldNames 
 	indexModel.Keys = keys
 
 	if _, err := m.coll.Indexes().CreateOne(ctx, indexModel); err != nil {
-		return err
+		return HandleMongoError(err)
 	}
 
 	return nil
 }
 
 // CreateTextIndex creates a text index for a collection with the given field names and language code.
+// You should create a text index to use text search. Field names are required and must be unique.
 // If the language code is not provided, "en" will be used by default.
 func (m *Collection) CreateTextIndex(ctx context.Context, languageCode string, fieldNames ...string) error {
 	if len(fieldNames) == 0 {
@@ -77,42 +97,50 @@ func (m *Collection) CreateTextIndex(ctx context.Context, languageCode string, f
 	indexModel.Keys = keys
 
 	if _, err := m.coll.Indexes().CreateOne(ctx, indexModel); err != nil {
-		return err
+		return HandleMongoError(err)
 	}
 
 	return nil
 }
 
 // FindOne finds one document in the collection using filter.
-// It returns ErrNotFound if no document is found.
-func (m *Collection) FindOne(ctx context.Context, dest any, filter M) error {
+// It returns ErrNotFound if NO document is found. Limit and AllowDiskUse options are no-op.
+func (m *Collection) FindOne(ctx context.Context, dest any, filter M, rawOpts ...FindOptions) error {
+	findOneOpts := options.FindOne()
+	if len(rawOpts) > 0 {
+		opts := rawOpts[0]
+		findOneOpts.SetSkip(int64(opts.Skip))
+		findOneOpts.SetSort(opts.Sort)
+		findOneOpts.SetAllowPartialResults(opts.AllowPartialResults)
+	}
 	res := m.coll.FindOne(ctx, filter.Prepare())
 	if err := res.Err(); err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	if err := res.Decode(dest); err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	return nil
 }
 
 // Find finds many documents in the collection using filter.
-// It does not return any error if no document is found.
-func (m *Collection) Find(ctx context.Context, dest any, filter M) error {
-	return m.find(ctx, dest, filter.Prepare())
+// It does NOT return any error if no document is found.
+func (m *Collection) Find(ctx context.Context, dest any, filter M, opts ...FindOptions) error {
+	return m.find(ctx, dest, filter.Prepare(), opts...)
 }
 
 // FindAll finds all documents in the collection.
 // It does not return any error if no document is found.
-func (m *Collection) FindAll(ctx context.Context, dest any) error {
-	return m.find(ctx, dest, bson.D{})
+func (m *Collection) FindAll(ctx context.Context, dest any, opts ...FindOptions) error {
+	return m.find(ctx, dest, bson.D{}, opts...)
 }
 
 // Count counts the number of documents in the collection using filter.
+// Nil filter means count all.
 func (m *Collection) Count(ctx context.Context, filter M) (int64, error) {
 	count, err := m.coll.CountDocuments(ctx, filter.Prepare())
 	if err != nil {
-		return 0, handleError(err)
+		return 0, HandleMongoError(err)
 	}
 	return count, nil
 }
@@ -124,15 +152,16 @@ func (m *Collection) Distinct(ctx context.Context, dest any, field string, filte
 	}
 	res := m.coll.Distinct(ctx, field, filter.Prepare())
 	if err := res.Err(); err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	if err := res.Decode(dest); err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	return nil
 }
 
-// Insert inserts a document(s) into the collection. Internally InsertMany uses bulk write.
+// Insert inserts a document(s) into the collection.
+// Internally InsertMany uses bulk write.
 func (m *Collection) Insert(ctx context.Context, records ...any) (err error) {
 	if len(records) == 0 {
 		return nil
@@ -142,7 +171,7 @@ func (m *Collection) Insert(ctx context.Context, records ...any) (err error) {
 	} else {
 		_, err = m.coll.InsertMany(ctx, records)
 	}
-	return handleError(err)
+	return HandleMongoError(err)
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.
@@ -151,7 +180,7 @@ func (m *Collection) Upsert(ctx context.Context, record any, filter M) error {
 	opts := options.Replace().SetUpsert(true)
 	upd, err := m.coll.ReplaceOne(ctx, filter.Prepare(), record, opts)
 	if err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	if upd != nil && upd.MatchedCount == 0 {
 		return ErrNotFound
@@ -164,7 +193,7 @@ func (m *Collection) Upsert(ctx context.Context, record any, filter M) error {
 func (m *Collection) ReplaceOne(ctx context.Context, record any, filter M) error {
 	upd, err := m.coll.ReplaceOne(ctx, filter.Prepare(), record)
 	if err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	if upd != nil && upd.MatchedCount == 0 {
 		return ErrNotFound
@@ -173,24 +202,28 @@ func (m *Collection) ReplaceOne(ctx context.Context, record any, filter M) error
 }
 
 // SetFields sets fields in a document in the collection using updates map.
-// For example: {key1: value1, key2: value2} becomes {$set: {key1: value1, key2: value2}}
+// For example: {key1: value1, key2: value2} becomes {$set: {key1: value1, key2: value2}}.
 // It returns ErrNotFound if no document is updated.
 func (m *Collection) SetFields(ctx context.Context, filter, update M) error {
 	return m.updateOne(ctx, filter.Prepare(), lang.If(update != nil, prepareUpdates(update, Set), bson.D{}))
 }
 
 // UpdateOne updates a document in the collection.
+// Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}.
+// Modifiers operate on fields. For example: {$mod: {<field>: ...}}.
 // It returns ErrNotFound if no document is updated.
 func (m *Collection) UpdateOne(ctx context.Context, filter, update M) error {
 	return m.updateOne(ctx, filter.Prepare(), update.Prepare())
 }
 
 // UpdateMany updates multi documents in the collection.
+// Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}.
+// Modifiers operate on fields. For example: {$mod: {<field>: ...}}.
 // It returns ErrNotFound if no document is updated.
 func (m *Collection) UpdateMany(ctx context.Context, filter, update M) error {
 	updateResult, err := m.coll.UpdateMany(ctx, filter.Prepare(), update.Prepare())
 	if err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	if updateResult != nil && updateResult.MatchedCount == 0 {
 		return ErrNotFound
@@ -224,7 +257,7 @@ func (m *Collection) DeleteFields(ctx context.Context, filter M, fields ...strin
 func (m *Collection) DeleteOne(ctx context.Context, filter M) error {
 	del, err := m.coll.DeleteOne(ctx, filter.Prepare())
 	if err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	if del != nil && del.DeletedCount == 0 {
 		return ErrNotFound
@@ -237,7 +270,7 @@ func (m *Collection) DeleteOne(ctx context.Context, filter M) error {
 func (m *Collection) DeleteMany(ctx context.Context, filter M) error {
 	del, err := m.coll.DeleteMany(ctx, filter.Prepare())
 	if err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	if del != nil && del.DeletedCount == 0 {
 		return ErrNotFound
@@ -245,28 +278,37 @@ func (m *Collection) DeleteMany(ctx context.Context, filter M) error {
 	return nil
 }
 
-func (m *Collection) find(ctx context.Context, dest any, filter bson.D) error {
-	cur, err := m.coll.Find(ctx, filter)
+func (m *Collection) find(ctx context.Context, dest any, filter bson.D, rawOpts ...FindOptions) error {
+	findOpts := options.Find()
+	if len(rawOpts) > 0 {
+		opts := rawOpts[0]
+		lang.IfV(opts.Limit, func() { findOpts.SetLimit(int64(opts.Limit)) })
+		lang.IfV(opts.Skip, func() { findOpts.SetSkip(int64(opts.Skip)) })
+		lang.IfF(len(opts.Sort) > 0, func() { findOpts.SetSort(opts.Sort) })
+		lang.IfV(opts.AllowPartialResults, func() { findOpts.SetAllowPartialResults(opts.AllowPartialResults) })
+		lang.IfV(opts.AllowDiskUse, func() { findOpts.SetAllowDiskUse(opts.AllowDiskUse) })
+	}
+	cur, err := m.coll.Find(ctx, filter, findOpts)
 	if err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	defer cur.Close(ctx)
 
 	if err := cur.All(ctx, dest); err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 
 	if err := cur.Err(); err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 
 	return nil
 }
 
-func (m *Collection) updateOne(ctx context.Context, filter, update bson.D) error {
-	updateResult, err := m.coll.UpdateOne(ctx, filter, update)
+func (m *Collection) updateOne(ctx context.Context, filter, update bson.D, opts ...options.Lister[options.UpdateOptions]) error {
+	updateResult, err := m.coll.UpdateOne(ctx, filter, update, opts...)
 	if err != nil {
-		return handleError(err)
+		return HandleMongoError(err)
 	}
 	if updateResult != nil && updateResult.MatchedCount == 0 {
 		return ErrNotFound

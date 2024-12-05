@@ -11,6 +11,7 @@ import (
 
 // Common errors
 var (
+	// ErrNotFound is returned when a document is not found in the database in Find, Update or Delete methods.
 	ErrNotFound            = errors.New("not found")
 	ErrDuplicate           = errors.New("duplicate")
 	ErrInvalidArgument     = errors.New("invalid argument")
@@ -689,6 +690,7 @@ var errorMap = map[int32]error{
 
 var mu sync.RWMutex
 
+// ErrorFromCode returns an error variable from a MongoDB error code.
 func ErrorFromCode(code int32) (error, bool) {
 	mu.RLock()
 	defer mu.RUnlock()
@@ -696,7 +698,8 @@ func ErrorFromCode(code int32) (error, bool) {
 	return err, ok
 }
 
-func handleError(err error) error {
+// HandleMongoError handles error from methods of Collection in mongo package and returns appropriate error from mongox.
+func HandleMongoError(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -719,6 +722,13 @@ func handleError(err error) error {
 
 	case strings.Contains(err.Error(), "must be a pointer") ||
 		strings.Contains(err.Error(), "update document must have") ||
+		strings.Contains(err.Error(), "cannot decode") ||
+		strings.Contains(err.Error(), "must contain key beginning") ||
+		strings.Contains(err.Error(), "empty update path") ||
+		strings.Contains(err.Error(), "appears multiple times in the index key") ||
+		strings.Contains(err.Error(), "value must be") ||
+		strings.Contains(err.Error(), "is the only expression supported") ||
+		strings.Contains(err.Error(), "llegal key") ||
 		strings.Contains(err.Error(), "DocumentSequence"):
 		return fmt.Errorf("%w: %v", ErrInvalidArgument, err)
 
@@ -762,6 +772,14 @@ func handleError(err error) error {
 			}
 			errs = append(errs, fmt.Errorf("%w: %v", errFromCode, we))
 		}
+		if we := writeError.WriteConcernError; we != nil {
+			errFromCode, ok := ErrorFromCode(int32(we.Code))
+			if !ok {
+				errs = append(errs, we)
+			} else {
+				errs = append(errs, fmt.Errorf("%w: %v", errFromCode, we))
+			}
+		}
 		return errors.Join(errs...)
 	}
 
@@ -787,15 +805,6 @@ func handleError(err error) error {
 			errs = append(errs, fmt.Errorf("%w: %v", errFromCode, we))
 		}
 		return errors.Join(errs...)
-	}
-
-	var bulkWriteError mongo.WriteConcernError
-	if errors.As(err, &bulkWriteError) {
-		errFromCode, ok := ErrorFromCode(int32(bulkWriteError.Code))
-		if !ok {
-			return fmt.Errorf("bulk write error: %w", bulkWriteError)
-		}
-		return fmt.Errorf("%w: %v", errFromCode, bulkWriteError)
 	}
 
 	var mongoCryptError mongo.MongocryptError

@@ -88,7 +88,7 @@ func processDiffStruct(diff any, parentField string) (map[string]any, error) {
 		}
 
 		kind := field.Kind()
-		if kind != reflect.Ptr && kind != reflect.Array && kind != reflect.Slice && kind != reflect.Map {
+		if kind != reflect.Ptr && kind != reflect.Slice && kind != reflect.Map {
 			// expect pointers or slice/
 			continue
 		}
