@@ -69,6 +69,7 @@ func Connect(ctx context.Context, cfg Config) (*Client, error) {
 	out := &Client{
 		client: client,
 		dbs:    make(map[string]*Database),
+		adbs:   make(map[string]*AsyncDatabase),
 	}
 
 	return out, nil
@@ -127,7 +128,8 @@ func (m *Client) AsyncDatabase(ctx context.Context, name string, workers int, lo
 			Logger:  logger,
 			Retries: DefaultAsyncRetries,
 		}),
-		log: logger,
+		log:   logger,
+		colls: make(map[string]*AsyncCollection),
 	}
 
 	m.mu.Lock()

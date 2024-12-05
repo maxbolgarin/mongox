@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"log"
+	"log/slog"
 	"math"
 	"reflect"
 	"sort"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,20 +28,22 @@ var client *mongox.Client
 const (
 	dbName = "mongox"
 
-	findOneCollection = "find_one"
-	findCollection    = "find"
-	findAllCollection = "find_all"
-
 	indexSingleCollection = "index_single"
 	indexManyCollection   = "index_many"
 	textCollection        = "text"
-	updateCollection      = "update"
+
+	findOneCollection = "find_one"
+	findCollection    = "find"
+	findAllCollection = "find_all"
+	updateCollection  = "update"
 
 	errorNilArgCollection        = "error_nil_arguments"
 	errorInvalidArgCollection    = "error_invalid_arguments"
 	errorInvalidFilterCollection = "error_invalid_filters"
 	errorInvalidUpdCollection    = "error_invalid_upd"
 	errorInvalidStateCollection  = "error_invalid_state"
+
+	asyncCollection = "async"
 )
 
 func TestIndexAndText(t *testing.T) {
@@ -399,7 +403,7 @@ func TestUpdate(t *testing.T) {
 		}
 
 		testUpdate(t, ctx, db, entity, mongox.M{"name": entity.Name})
-		err = coll.SetFields(ctx, f, mongox.M{"name": "new-name"})
+		err = mongox.SetFields(ctx, coll, f, mongox.M{"name": "new-name"})
 		if err != nil {
 			t.Error(err)
 		}
@@ -477,22 +481,36 @@ func TestUpdate(t *testing.T) {
 
 		testUpdate(t, ctx, db, newEntity, mongox.M{"name": newEntity.Name})
 		testUpdate(t, ctx, db, newEntity, mongox.M{"number": newEntity.Number})
+		testUpdate(t, ctx, db, newEntity, mongox.M{"struct.name": newEntity.Struct.Name})
+		testUpdate(t, ctx, db, newEntity, mongox.M{"time": newEntity.Time})
 
 		updTestEntity := struct {
-			Name   *string `bson:"name"`
-			Number *int    `bson:"number"`
+			Name   *string    `bson:"name"`
+			Number *int       `bson:"number"`
+			Time   *time.Time `bson:"time"`
+			Struct *struct {
+				Name *string `bson:"name"`
+			} `bson:"struct"`
 		}{
 			Name:   lang.Ptr("new-name"),
 			Number: lang.Ptr(9999999),
+			Time:   lang.Ptr(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)),
+			Struct: &struct {
+				Name *string `bson:"name"`
+			}{
+				Name: lang.Ptr("new-struct-name"),
+			},
 		}
 
-		err = coll.UpdateOneFromDiff(ctx, mongox.M{"id": "1"}, updTestEntity)
+		err = mongox.UpdateOneFromDiff(ctx, coll, mongox.M{"id": "1"}, updTestEntity)
 		if err != nil {
 			t.Error(err)
 		}
 
 		testUpdate(t, ctx, db, newEntity, mongox.M{"name": newEntity.Name}, mongox.ErrNotFound)
 		testUpdate(t, ctx, db, newEntity, mongox.M{"number": newEntity.Number}, mongox.ErrNotFound)
+		testUpdate(t, ctx, db, newEntity, mongox.M{"struct.name": newEntity.Struct.Name}, mongox.ErrNotFound)
+		testUpdate(t, ctx, db, newEntity, mongox.M{"time": newEntity.Time}, mongox.ErrNotFound)
 
 		newEntity, err = mongox.FindOne[testEntity](ctx, coll, mongox.M{"id": "1"})
 		if err != nil {
@@ -501,6 +519,8 @@ func TestUpdate(t *testing.T) {
 
 		testUpdate(t, ctx, db, newEntity, mongox.M{"name": newEntity.Name})
 		testUpdate(t, ctx, db, newEntity, mongox.M{"number": newEntity.Number})
+		testUpdate(t, ctx, db, newEntity, mongox.M{"struct.name": newEntity.Struct.Name})
+		testUpdate(t, ctx, db, newEntity, mongox.M{"time": newEntity.Time})
 	})
 }
 
@@ -815,13 +835,13 @@ func TestError(t *testing.T) {
 		if err = coll.UpdateMany(ctx, f, upd); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
 		}
-		if err = coll.DeleteFields(ctx, f); !errors.Is(err, mongox.ErrNotFound) {
+		if err = mongox.DeleteFields(ctx, coll, f); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
 		}
-		if err = coll.DeleteOne(ctx, f); !errors.Is(err, mongox.ErrNotFound) {
+		if err = mongox.DeleteOne(ctx, coll, f); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
 		}
-		if err = coll.DeleteMany(ctx, f); !errors.Is(err, mongox.ErrNotFound) {
+		if err = mongox.DeleteMany(ctx, coll, f); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
 		}
 	})
@@ -928,7 +948,7 @@ func TestError(t *testing.T) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.UpdateOne(ctx, f, mongox.M{mongox.Pop: mongox.M{"number": ""}})
+		err = mongox.UpdateOne(ctx, coll, f, mongox.M{mongox.Pop: mongox.M{"number": ""}})
 		if !errors.Is(err, mongox.ErrFailedToParse) {
 			t.Errorf("expected error %v, got %v", mongox.ErrFailedToParse, err)
 		}
@@ -1024,7 +1044,7 @@ func TestError(t *testing.T) {
 			t.Error(err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Mul: mongox.M{"number": ""}})
+		err = mongox.UpdateMany(ctx, coll, f, mongox.M{mongox.Mul: mongox.M{"number": ""}})
 		if !errors.Is(err, mongox.ErrTypeMismatch) {
 			t.Errorf("expected error %v, got %v", mongox.ErrTypeMismatch, err)
 		}
@@ -1116,7 +1136,109 @@ func TestError(t *testing.T) {
 			t.Errorf("expected error %v, got %v", mongox.ErrDuplicateKey, err)
 		}
 	})
+}
 
+func TestAsync(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if err := client.Ping(ctx); err != nil {
+		t.Error(err)
+	}
+
+	db := client.Database(dbName)
+	asyncDB := client.AsyncDatabase(ctx, dbName, 0, slog.Default())
+
+	t.Run("Async", func(t *testing.T) {
+		coll := db.Collection(asyncCollection)
+		asyncColl := asyncDB.AsyncCollection(asyncCollection)
+		queueColl := asyncColl.QueueCollection(asyncCollection)
+		entity := newTestEntity("1")
+		entity2 := newTestEntity("2")
+		entity3 := newTestEntity("3")
+
+		// error
+		asyncDB.WithTransaction("", "", func(ctx context.Context) error {
+			return nil
+		})
+
+		// error
+		queueColl.Insert([]any{entity2, nil})
+
+		for i := 0; i < 6; i++ {
+			queueColl.Insert(entity)
+		}
+
+		queueColl.Upsert(entity2, mongox.M{"id": "2"})
+		queueColl.ReplaceOne(entity3, mongox.M{"id": "2"})
+		queueColl.SetFields(mongox.M{"id": "3"}, mongox.M{"name": "new-name"})
+		queueColl.UpdateOne(mongox.M{"id": "3"}, mongox.M{mongox.Inc: mongox.M{"number": 1}})
+		diff := struct {
+			Bool *bool `bson:"bool"`
+		}{
+			Bool: lang.Ptr(!entity3.Bool),
+		}
+		queueColl.UpdateOneFromDiff(mongox.M{"id": "3"}, diff)
+
+		queueColl.UpdateMany(mongox.M{"id": "1"}, mongox.M{mongox.Inc: mongox.M{"number": 1}})
+		queueColl.DeleteOne(mongox.M{"number": entity.Number + 1})
+		queueColl.Insert(entity, entity, entity)
+		queueColl.DeleteMany(mongox.M{"number": entity.Number})
+
+		var (
+			s  []int
+			mu sync.Mutex
+			wg sync.WaitGroup
+		)
+
+		wg.Add(3)
+		asyncDB.WithTask(asyncCollection, "", func(ctx context.Context) error {
+			defer wg.Done()
+			time.Sleep(500 * time.Millisecond)
+			mu.Lock()
+			defer mu.Unlock()
+			s = append(s, 1)
+			return nil
+		})
+		asyncDB.WithTask(asyncCollection, "", func(ctx context.Context) error {
+			defer wg.Done()
+			time.Sleep(100 * time.Millisecond)
+			mu.Lock()
+			defer mu.Unlock()
+			s = append(s, 2)
+			return nil
+		})
+		asyncDB.WithTask(asyncCollection, "", func(ctx context.Context) error {
+			defer wg.Done()
+			mu.Lock()
+			defer mu.Unlock()
+			s = append(s, 3)
+			return nil
+		})
+
+		wg.Wait()
+
+		if !reflect.DeepEqual(s, []int{1, 2, 3}) {
+			t.Errorf("expected %v, got %v", []int{1, 2, 3}, s)
+		}
+
+		n, err := coll.Count(ctx, mongox.M{"id": "1"})
+		if err != nil {
+			t.Error(err)
+		}
+		if n != 5 {
+			t.Errorf("expected %v, got %v", 5, n)
+		}
+
+		entity.Number++
+		testAsync(t, ctx, db, entity, mongox.M{"id": "1"})
+		testAsync(t, ctx, db, entity2, mongox.M{"id": "2"}, mongox.ErrNotFound)
+
+		entity3.Name = "new-name"
+		entity3.Number++
+		entity3.Bool = !entity3.Bool
+		testAsync(t, ctx, db, entity3, mongox.M{"id": "3"})
+	})
 }
 
 func TestMain(m *testing.M) {
@@ -1212,26 +1334,20 @@ func TestMain(m *testing.M) {
 }
 
 func testFindOne(t *testing.T, ctx context.Context, db *mongox.Database, entity testEntity, filter mongox.M, err2 ...error) {
-	var result testEntity
-	err := db.Collection(findOneCollection).FindOne(ctx, &result, filter)
-	if len(err2) > 0 {
-		if !errors.Is(err, err2[0]) {
-			t.Errorf("expected %v, got %v, query: %v", err2[0], err, filter)
-		}
-		return
-	}
-	if err != nil {
-		t.Errorf("expected nil, got %v, query: %v", err, filter)
-		return
-	}
-	if !reflect.DeepEqual(entity, result) {
-		t.Errorf("expected %v, got %v, query: %v", entity, result, filter)
-	}
+	testOne(t, ctx, db.Collection(findOneCollection), entity, filter, err2...)
 }
 
 func testUpdate(t *testing.T, ctx context.Context, db *mongox.Database, entity testEntity, filter mongox.M, err2 ...error) {
+	testOne(t, ctx, db.Collection(updateCollection), entity, filter, err2...)
+}
+
+func testAsync(t *testing.T, ctx context.Context, db *mongox.Database, entity testEntity, filter mongox.M, err2 ...error) {
+	testOne(t, ctx, db.Collection(asyncCollection), entity, filter, err2...)
+}
+
+func testOne(t *testing.T, ctx context.Context, coll *mongox.Collection, entity testEntity, filter mongox.M, err2 ...error) {
 	var result testEntity
-	err := db.Collection(updateCollection).FindOne(ctx, &result, filter)
+	err := coll.FindOne(ctx, &result, filter)
 	if len(err2) > 0 {
 		if !errors.Is(err, err2[0]) {
 			t.Errorf("expected %v, got %v, query: %v", err2[0], err, filter)
@@ -1310,7 +1426,7 @@ func newTestEntity(id string) testEntity {
 		Slice:  []int{rand.Intn(26), rand.Intn(26), rand.Intn(26)},
 		Array:  [3]int{rand.Intn(26), rand.Intn(26), rand.Intn(26)},
 		Map:    map[string]int{"1": rand.Intn(26), randString(): rand.Intn(26), randString(): rand.Intn(26)},
-		Time:   time.Date(2000, 1, 1, 1, 2, 3, 0, time.UTC),
+		Time:   time.Date(2000, 1, rand.Intn(26), rand.Intn(20), rand.Intn(59), rand.Intn(59), 0, time.UTC),
 		Struct: innerStruct{Name: randString(), Number: rand.Intn(26)},
 	}
 }

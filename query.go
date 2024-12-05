@@ -109,10 +109,6 @@ func processDiffStruct(diff any, parentField string) (map[string]any, error) {
 				upd[fieldName] = i
 				continue
 			}
-			if _, ok := i.(time.Duration); ok {
-				upd[fieldName] = i
-				continue
-			}
 
 			structUpd, err := processDiffStruct(field.Interface(), fieldName)
 			if err != nil {

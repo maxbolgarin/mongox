@@ -5,17 +5,21 @@ import (
 )
 
 // CreateIndex creates an index for a collection with the given field names.
+// Field names are required and must be unique.
 func CreateIndex(ctx context.Context, coll *Collection, isUnique bool, fieldNames ...string) error {
 	return coll.CreateIndex(ctx, isUnique, fieldNames...)
 }
 
 // CreateTextIndex creates a text index for a collection with the given field names and language code.
+// You should create a text index to use text search. Field names are required and must be unique.
+// If the language code is not provided, "en" will be used by default.
 func CreateTextIndex(ctx context.Context, coll *Collection, languageCode string, fieldNames ...string) error {
 	return coll.CreateTextIndex(ctx, languageCode, fieldNames...)
 }
 
-// FindOne finds one document in the collection using filter.
-// It returns ErrNotFound if no document is found.
+// FindOne finds a one document in the collection using filter.
+// It returns ErrNotFound if NO document is found.
+// Limit and AllowDiskUse options are no-op.
 func FindOne[T any](ctx context.Context, coll *Collection, filter M, opts ...FindOptions) (T, error) {
 	var result T
 	if err := coll.FindOne(ctx, &result, filter, opts...); err != nil {
@@ -25,6 +29,7 @@ func FindOne[T any](ctx context.Context, coll *Collection, filter M, opts ...Fin
 }
 
 // Find finds many documents in the collection using filter.
+// It does NOT return any error if no document is found.
 func Find[T any](ctx context.Context, coll *Collection, filter M, opts ...FindOptions) ([]T, error) {
 	var result []T
 	if err := coll.Find(ctx, &result, filter, opts...); err != nil {
@@ -34,6 +39,7 @@ func Find[T any](ctx context.Context, coll *Collection, filter M, opts ...FindOp
 }
 
 // FindAll finds all documents in the collection.
+// It does NOT return any error if no document is found.
 func FindAll[T any](ctx context.Context, coll *Collection, opts ...FindOptions) ([]T, error) {
 	var result []T
 	if err := coll.FindAll(ctx, &result, opts...); err != nil {
@@ -43,11 +49,13 @@ func FindAll[T any](ctx context.Context, coll *Collection, opts ...FindOptions) 
 }
 
 // Count counts the number of documents in the collection using filter.
+// Nil filter means count all documents.
 func Count(ctx context.Context, coll *Collection, filter M) (int64, error) {
 	return coll.Count(ctx, filter)
 }
 
 // Distinct finds distinct values for the specified field in the collection.
+// You can use predefined options from mongox, e.g. mongox.M{mongox.Inc: mongox.M{"number": 1}}.
 func Distinct[T any](ctx context.Context, coll *Collection, field string, filter M) ([]T, error) {
 	var result []T
 	if err := coll.Distinct(ctx, &result, field, filter); err != nil {
@@ -57,6 +65,7 @@ func Distinct[T any](ctx context.Context, coll *Collection, field string, filter
 }
 
 // Insert inserts a document(s) into the collection.
+// Internally InsertMany uses bulk write.
 func Insert(ctx context.Context, coll *Collection, record ...any) error {
 	return coll.Insert(ctx, record...)
 }
@@ -74,6 +83,7 @@ func ReplaceOne(ctx context.Context, coll *Collection, record any, filter M) err
 }
 
 // SetFields sets fields in a document in the collection using updates map.
+// For example: {key1: value1, key2: value2} becomes {$set: {key1: value1, key2: value2}}.
 // It returns ErrNotFound if no document is updated.
 func SetFields(ctx context.Context, coll *Collection, filter M, update map[string]any) error {
 	return coll.SetFields(ctx, filter, update)
@@ -82,6 +92,7 @@ func SetFields(ctx context.Context, coll *Collection, filter M, update map[strin
 // UpdateOne updates a document in the collection.
 // Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}.
 // Modifiers operate on fields. For example: {$mod: {<field>: ...}}.
+// You can use predefined options from mongox, e.g. mongox.M{mongox.Inc: mongox.M{"number": 1}}.
 // It returns ErrNotFound if no document is updated.
 func UpdateOne(ctx context.Context, coll *Collection, filter, update M) error {
 	return coll.UpdateOne(ctx, filter, update)
@@ -90,12 +101,22 @@ func UpdateOne(ctx context.Context, coll *Collection, filter, update M) error {
 // UpdateMany updates multi documents in the collection.
 // Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}.
 // Modifiers operate on fields. For example: {$mod: {<field>: ...}}.
+// You can use predefined options from mongox, e.g. mongox.M{mongox.Inc: mongox.M{"number": 1}}.
 // It returns ErrNotFound if no document is updated.
 func UpdateMany(ctx context.Context, coll *Collection, filter, update M) error {
 	return coll.UpdateMany(ctx, filter, update)
 }
 
 // UpdateOneFromDiff sets fields in a document in the collection using diff structure.
+// Diff structure is a map of pointers to field names with their new values.
+// E.g. if you have structure:
+//
+//	type MyStruct struct {name string, index int}
+//
+// Diff structure will be:
+//
+//	type MyStructDiff struct {name *string, index *int}
+//
 // It returns ErrNotFound if no document is updated.
 func UpdateOneFromDiff(ctx context.Context, coll *Collection, filter M, diff any) error {
 	return coll.UpdateOneFromDiff(ctx, filter, diff)

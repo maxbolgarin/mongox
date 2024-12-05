@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-// FindOptions is used to configure a Find operation.
+// FindOptions is used to configure FindOne, Find and FindAll operations.
 type FindOptions struct {
 	// Sets a limit of documents returned in the result set.
 	// No-op in FindOne.
@@ -35,7 +35,7 @@ type Collection struct {
 	coll *mongo.Collection
 }
 
-// Collection returns the collection object.
+// Collection returns an original mongo.Collection object.
 func (m *Collection) Collection() *mongo.Collection {
 	return m.coll
 }
@@ -103,8 +103,9 @@ func (m *Collection) CreateTextIndex(ctx context.Context, languageCode string, f
 	return nil
 }
 
-// FindOne finds one document in the collection using filter.
-// It returns ErrNotFound if NO document is found. Limit and AllowDiskUse options are no-op.
+// FindOne finds a one document in the collection using filter.
+// It returns ErrNotFound if NO document is found.
+// Limit and AllowDiskUse options are no-op.
 func (m *Collection) FindOne(ctx context.Context, dest any, filter M, rawOpts ...FindOptions) error {
 	findOneOpts := options.FindOne()
 	if len(rawOpts) > 0 {
@@ -130,13 +131,13 @@ func (m *Collection) Find(ctx context.Context, dest any, filter M, opts ...FindO
 }
 
 // FindAll finds all documents in the collection.
-// It does not return any error if no document is found.
+// It does NOT return any error if no document is found.
 func (m *Collection) FindAll(ctx context.Context, dest any, opts ...FindOptions) error {
 	return m.find(ctx, dest, bson.D{}, opts...)
 }
 
 // Count counts the number of documents in the collection using filter.
-// Nil filter means count all.
+// Nil filter means count all documents.
 func (m *Collection) Count(ctx context.Context, filter M) (int64, error) {
 	count, err := m.coll.CountDocuments(ctx, filter.Prepare())
 	if err != nil {
@@ -145,7 +146,7 @@ func (m *Collection) Count(ctx context.Context, filter M) (int64, error) {
 	return count, nil
 }
 
-// Distinct finds distinct values for the specified field in the collection.
+// Distinct finds distinct values for the specified field in the collection using filter.
 func (m *Collection) Distinct(ctx context.Context, dest any, field string, filter M) error {
 	if field == "" {
 		return fmt.Errorf("%w: no field name provided", ErrInvalidArgument)
@@ -160,7 +161,7 @@ func (m *Collection) Distinct(ctx context.Context, dest any, field string, filte
 	return nil
 }
 
-// Insert inserts a document(s) into the collection.
+// Insert inserts a document or many documents into the collection.
 // Internally InsertMany uses bulk write.
 func (m *Collection) Insert(ctx context.Context, records ...any) (err error) {
 	if len(records) == 0 {
@@ -211,6 +212,7 @@ func (m *Collection) SetFields(ctx context.Context, filter, update M) error {
 // UpdateOne updates a document in the collection.
 // Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}.
 // Modifiers operate on fields. For example: {$mod: {<field>: ...}}.
+// You can use predefined options from mongox, e.g. mongox.M{mongox.Inc: mongox.M{"number": 1}}.
 // It returns ErrNotFound if no document is updated.
 func (m *Collection) UpdateOne(ctx context.Context, filter, update M) error {
 	return m.updateOne(ctx, filter.Prepare(), update.Prepare())
@@ -219,6 +221,7 @@ func (m *Collection) UpdateOne(ctx context.Context, filter, update M) error {
 // UpdateMany updates multi documents in the collection.
 // Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}.
 // Modifiers operate on fields. For example: {$mod: {<field>: ...}}.
+// You can use predefined options from mongox, e.g. mongox.M{mongox.Inc: mongox.M{"number": 1}}.
 // It returns ErrNotFound if no document is updated.
 func (m *Collection) UpdateMany(ctx context.Context, filter, update M) error {
 	updateResult, err := m.coll.UpdateMany(ctx, filter.Prepare(), update.Prepare())
@@ -232,6 +235,15 @@ func (m *Collection) UpdateMany(ctx context.Context, filter, update M) error {
 }
 
 // UpdateOneFromDiff sets fields in a document in the collection using diff structure.
+// Diff structure is a map of pointers to field names with their new values.
+// E.g. if you have structure:
+//
+//	type MyStruct struct {name string, index int}
+//
+// Diff structure will be:
+//
+//	type MyStructDiff struct {name *string, index *int}
+//
 // It returns ErrNotFound if no document is updated.
 func (m *Collection) UpdateOneFromDiff(ctx context.Context, filter M, diff any) error {
 	update, err := diffToUpdates(diff)
