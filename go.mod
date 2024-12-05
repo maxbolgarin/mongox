@@ -2,8 +2,6 @@ module github.com/maxbolgarin/mongox
 
 go 1.22
 
-toolchain go1.23.0
-
 require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/maxbolgarin/gorder v1.1.0
