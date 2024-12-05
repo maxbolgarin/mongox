@@ -1,11 +1,14 @@
 module github.com/maxbolgarin/mongox
 
-go 1.23.0
+go 1.22
+
+toolchain go1.23.0
 
 require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/maxbolgarin/gorder v1.1.0
 	github.com/maxbolgarin/lang v1.7.0
+	github.com/ory/dockertest/v3 v3.11.0
 	go.mongodb.org/mongo-driver/v2 v2.0.0-beta2
 )
 
@@ -17,7 +20,6 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/containerd/continuity v0.4.3 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/cli v26.1.4+incompatible // indirect
 	github.com/docker/docker v27.1.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
@@ -33,11 +35,8 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runc v1.1.13 // indirect
-	github.com/ory/dockertest/v3 v3.11.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
