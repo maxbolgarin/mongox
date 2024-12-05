@@ -147,12 +147,12 @@ func (ac *AsyncCollection) UpdateMany(queueKey, taskName string, filter, update 
 	})
 }
 
-// UpdateFromDiff sets fields in a document in the collection using diff structure asynchronously without waiting for it to complete.
+// UpdateOneFromDiff sets fields in a document in the collection using diff structure asynchronously without waiting for it to complete.
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate and ErrInvalidArgument.
-func (ac *AsyncCollection) UpdateFromDiff(queueKey, taskName string, filter M, diff any) {
+func (ac *AsyncCollection) UpdateOneFromDiff(queueKey, taskName string, filter M, diff any) {
 	ac.push(queueKey, taskName, "update_from_diff", func(ctx context.Context) error {
-		return ac.coll.UpdateFromDiff(ctx, filter, diff)
+		return ac.coll.UpdateOneFromDiff(ctx, filter, diff)
 	})
 }
 

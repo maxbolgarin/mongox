@@ -231,9 +231,9 @@ func (m *Collection) UpdateMany(ctx context.Context, filter, update M) error {
 	return nil
 }
 
-// UpdateFromDiff sets fields in a document in the collection using diff structure.
+// UpdateOneFromDiff sets fields in a document in the collection using diff structure.
 // It returns ErrNotFound if no document is updated.
-func (m *Collection) UpdateFromDiff(ctx context.Context, filter M, diff any) error {
+func (m *Collection) UpdateOneFromDiff(ctx context.Context, filter M, diff any) error {
 	update, err := diffToUpdates(diff)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidArgument, err)

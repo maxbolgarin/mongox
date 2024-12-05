@@ -19,7 +19,6 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 )
 
-// TODO: updates
 // TODO: async
 
 var client *mongox.Client
@@ -314,6 +313,30 @@ func TestInsertFindDelete(t *testing.T) {
 			t.Errorf("expected 100, got %d", len(result))
 		}
 
+		result, err = mongox.FindAll[testEntity](ctx, db.Collection(findAllCollection), mongox.FindOptions{Limit: 10})
+		if err != nil {
+			t.Error(err)
+		}
+		if len(result) != 10 {
+			t.Errorf("expected 10, got %d", len(result))
+		}
+
+		result, err = mongox.FindAll[testEntity](ctx, db.Collection(findAllCollection), mongox.FindOptions{Skip: 90})
+		if err != nil {
+			t.Error(err)
+		}
+		if len(result) != 10 {
+			t.Errorf("expected 10, got %d", len(result))
+		}
+
+		result, err = mongox.FindAll[testEntity](ctx, db.Collection(findAllCollection), mongox.FindOptions{Sort: mongox.M{"id": 1}})
+		if err != nil {
+			t.Error(err)
+		}
+		if len(result) != 100 {
+			t.Errorf("expected 100, got %d", len(result))
+		}
+
 		res, err := db.Collection(findAllCollection).Count(ctx, nil)
 		if err != nil {
 			t.Error(err)
@@ -358,26 +381,127 @@ func TestInsertFindDelete(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	// ctx, cancel := context.WithCancel(context.Background())
-	// defer cancel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// db := client.Database(dbName)
+	db := client.Database(dbName)
 
-	// t.Run("Update", func(t *testing.T) {
-	// 	coll := db.Collection(updateCollection)
-	// 	updTestEntity := struct {
-	// 		Name   *string `bson:"name"`
-	// 		Number *int    `bson:"number"`
-	// 	}{
-	// 		Name:   lang.Ptr("new-name"),
-	// 		Number: lang.Ptr(9999999),
-	// 	}
+	t.Run("Update", func(t *testing.T) {
+		var (
+			coll   = db.Collection(updateCollection)
+			entity = newTestEntity("1")
+			f      = mongox.M{"id": "1"}
+		)
 
-	// 	err := coll.UpdateFromDiff(ctx, mongox.M{"id": "1"}, updTestEntity)
-	// 	if err != nil {
-	// 		t.Error(err)
-	// 	}
-	// })
+		err := coll.Insert(ctx, entity)
+		if err != nil {
+			t.Error(err)
+		}
+
+		testUpdate(t, ctx, db, entity, mongox.M{"name": entity.Name})
+		err = coll.SetFields(ctx, f, mongox.M{"name": "new-name"})
+		if err != nil {
+			t.Error(err)
+		}
+		testUpdate(t, ctx, db, entity, mongox.M{"name": entity.Name}, mongox.ErrNotFound)
+
+		if err := coll.FindOne(ctx, &entity, f); err != nil {
+			t.Error(err)
+		}
+		testUpdate(t, ctx, db, entity, mongox.M{"name": "new-name"})
+
+		testUpdate(t, ctx, db, entity, mongox.M{"number": entity.Number})
+		err = coll.UpdateOne(ctx, f, mongox.M{mongox.Inc: mongox.M{"number": 10}})
+		if err != nil {
+			t.Error(err)
+		}
+		testUpdate(t, ctx, db, entity, mongox.M{"number": entity.Number}, mongox.ErrNotFound)
+
+		if err := coll.FindOne(ctx, &entity, f); err != nil {
+			t.Error(err)
+		}
+		testUpdate(t, ctx, db, entity, mongox.M{"number": entity.Number})
+
+		err = coll.DeleteFields(ctx, f, "name")
+		if err != nil {
+			t.Error(err)
+		}
+		testUpdate(t, ctx, db, entity, mongox.M{"name": entity.Name}, mongox.ErrNotFound)
+		testUpdate(t, ctx, db, entity, mongox.M{"name": "new-name"}, mongox.ErrNotFound)
+
+		entity.Name = ""
+		testUpdate(t, ctx, db, entity, mongox.M{"name": nil})
+
+		err = coll.Insert(ctx, entity, entity, entity, entity, entity, entity, entity, entity, entity)
+		if err != nil {
+			t.Error(err)
+		}
+
+		var results []testEntity
+
+		err = coll.Find(ctx, &results, f)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(results) != 10 {
+			t.Errorf("expected 10, got %d", len(results))
+		}
+
+		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Set: mongox.M{"id": "2"}})
+		if err != nil {
+			t.Error(err)
+		}
+
+		results = nil
+		err = coll.Find(ctx, &results, f)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(results) != 0 {
+			t.Errorf("expected 0, got %d", len(results))
+		}
+
+		err = coll.Find(ctx, &results, mongox.M{"id": "2"})
+		if err != nil {
+			t.Error(err)
+		}
+		if len(results) != 10 {
+			t.Errorf("expected 10, got %d", len(results))
+		}
+
+		newEntity := newTestEntity("1")
+		err = coll.Insert(ctx, newEntity)
+		if err != nil {
+			t.Error(err)
+		}
+
+		testUpdate(t, ctx, db, newEntity, mongox.M{"name": newEntity.Name})
+		testUpdate(t, ctx, db, newEntity, mongox.M{"number": newEntity.Number})
+
+		updTestEntity := struct {
+			Name   *string `bson:"name"`
+			Number *int    `bson:"number"`
+		}{
+			Name:   lang.Ptr("new-name"),
+			Number: lang.Ptr(9999999),
+		}
+
+		err = coll.UpdateOneFromDiff(ctx, mongox.M{"id": "1"}, updTestEntity)
+		if err != nil {
+			t.Error(err)
+		}
+
+		testUpdate(t, ctx, db, newEntity, mongox.M{"name": newEntity.Name}, mongox.ErrNotFound)
+		testUpdate(t, ctx, db, newEntity, mongox.M{"number": newEntity.Number}, mongox.ErrNotFound)
+
+		newEntity, err = mongox.FindOne[testEntity](ctx, coll, mongox.M{"id": "1"})
+		if err != nil {
+			t.Error(err)
+		}
+
+		testUpdate(t, ctx, db, newEntity, mongox.M{"name": newEntity.Name})
+		testUpdate(t, ctx, db, newEntity, mongox.M{"number": newEntity.Number})
+	})
 }
 
 func TestError(t *testing.T) {
@@ -473,7 +597,7 @@ func TestError(t *testing.T) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.UpdateFromDiff(ctx, nil, nil)
+		err = coll.UpdateOneFromDiff(ctx, nil, nil)
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
@@ -933,12 +1057,12 @@ func TestError(t *testing.T) {
 
 		//
 
-		err = coll.UpdateFromDiff(ctx, f, mongox.M{"a": "b"})
+		err = coll.UpdateOneFromDiff(ctx, f, mongox.M{"a": "b"})
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.UpdateFromDiff(ctx, f, newTestEntity("1"))
+		err = coll.UpdateOneFromDiff(ctx, f, newTestEntity("1"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -1090,6 +1214,24 @@ func TestMain(m *testing.M) {
 func testFindOne(t *testing.T, ctx context.Context, db *mongox.Database, entity testEntity, filter mongox.M, err2 ...error) {
 	var result testEntity
 	err := db.Collection(findOneCollection).FindOne(ctx, &result, filter)
+	if len(err2) > 0 {
+		if !errors.Is(err, err2[0]) {
+			t.Errorf("expected %v, got %v, query: %v", err2[0], err, filter)
+		}
+		return
+	}
+	if err != nil {
+		t.Errorf("expected nil, got %v, query: %v", err, filter)
+		return
+	}
+	if !reflect.DeepEqual(entity, result) {
+		t.Errorf("expected %v, got %v, query: %v", entity, result, filter)
+	}
+}
+
+func testUpdate(t *testing.T, ctx context.Context, db *mongox.Database, entity testEntity, filter mongox.M, err2 ...error) {
+	var result testEntity
+	err := db.Collection(updateCollection).FindOne(ctx, &result, filter)
 	if len(err2) > 0 {
 		if !errors.Is(err, err2[0]) {
 			t.Errorf("expected %v, got %v, query: %v", err2[0], err, filter)

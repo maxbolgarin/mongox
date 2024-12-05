@@ -95,10 +95,10 @@ func UpdateMany(ctx context.Context, coll *Collection, filter, update M) error {
 	return coll.UpdateMany(ctx, filter, update)
 }
 
-// UpdateFromDiff sets fields in a document in the collection using diff structure.
+// UpdateOneFromDiff sets fields in a document in the collection using diff structure.
 // It returns ErrNotFound if no document is updated.
-func UpdateFromDiff(ctx context.Context, coll *Collection, filter M, diff any) error {
-	return coll.UpdateFromDiff(ctx, filter, diff)
+func UpdateOneFromDiff(ctx context.Context, coll *Collection, filter M, diff any) error {
+	return coll.UpdateOneFromDiff(ctx, filter, diff)
 }
 
 // DeleteFields deletes fields in a document in the collection.
