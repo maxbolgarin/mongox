@@ -3,6 +3,7 @@ package mongox_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"math"
@@ -19,6 +20,7 @@ import (
 	"github.com/maxbolgarin/mongox"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // TODO: async
@@ -36,6 +38,7 @@ const (
 	findCollection    = "find"
 	findAllCollection = "find_all"
 	updateCollection  = "update"
+	bulkCollection    = "bulk"
 
 	errorNilArgCollection        = "error_nil_arguments"
 	errorInvalidArgCollection    = "error_invalid_arguments"
@@ -524,6 +527,100 @@ func TestUpdate(t *testing.T) {
 	})
 }
 
+func TestBulk(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	db := client.Database(dbName)
+
+	t.Run("BulkSuccess", func(t *testing.T) {
+		for i := 0; i < 2; i++ {
+			var isOrdered bool
+			coll := db.Collection(bulkCollection)
+			if i == 1 {
+				coll = db.Collection(bulkCollection + "1")
+				isOrdered = true
+			}
+
+			bulker := mongox.NewBulkBuilder()
+			for i := 0; i < 10; i++ {
+				bulker.Insert(newTestEntity(fmt.Sprintf("%d", i+1)))
+			}
+			bulker.Upsert(newTestEntity("100"), mongox.M{"id": "11"})
+			bulker.ReplaceOne(newTestEntity("200"), mongox.M{"id": "2"})
+			bulker.SetFields(mongox.M{"id": "1"}, mongox.M{"name": "new-name"})
+			bulker.UpdateOne(mongox.M{"id": "1"}, mongox.M{"$set": mongox.M{"number": 228}})
+			bulker.UpdateMany(mongox.M{"id": mongox.M{mongox.Gte: "10"}}, mongox.M{"$set": mongox.M{"number": 322}})
+			bulker.UpdateOneFromDiff(mongox.M{"id": "10"}, struct {
+				Name *string `bson:"name"`
+			}{
+				Name: lang.Ptr("new-name-2"),
+			})
+			bulker.DeleteFields(mongox.M{"id": "10"}, "struct.name")
+			bulker.DeleteOne(mongox.M{"id": "3"})
+			bulker.DeleteMany(mongox.M{"id": mongox.M{mongox.In: []any{"4", "5"}}})
+
+			err := mongox.BulkWrite(ctx, coll, bulker.Models(), isOrdered)
+			if err != nil {
+				t.Error(err)
+			}
+
+			n, err := coll.Count(ctx, nil)
+			if err != nil {
+				t.Error(err)
+			}
+			if n != 8 {
+				t.Errorf("expected %d, got %d", 8, n)
+			}
+
+			entity, err := mongox.FindOne[testEntity](ctx, coll, mongox.M{"id": "1"})
+			if err != nil {
+				t.Error(err)
+			}
+			if entity.Name != "new-name" {
+				t.Errorf("expected %s, got %s", "new-name", entity.Name)
+			}
+			if entity.Number != 228 {
+				t.Errorf("expected %d, got %d", 228, entity.Number)
+			}
+			entity10, err := mongox.FindOne[testEntity](ctx, coll, mongox.M{"id": "10"})
+			if err != nil {
+				t.Error(err)
+			}
+			if entity10.Name != "new-name-2" {
+				t.Errorf("expected %s, got %s", "new-name-2", entity10.Name)
+			}
+			if entity10.Number != 322 {
+				t.Errorf("expected %d, got %d", 322, entity10.Number)
+			}
+			if entity10.Struct.Name != "" {
+				t.Errorf("expected %s, got %s", "", entity10.Struct.Name)
+			}
+
+			testBulk(t, ctx, db, newTestEntity("1"), mongox.M{"id": "2"}, mongox.ErrNotFound)
+			testBulk(t, ctx, db, newTestEntity("1"), mongox.M{"id": "3"}, mongox.ErrNotFound)
+			testBulk(t, ctx, db, newTestEntity("1"), mongox.M{"id": "4"}, mongox.ErrNotFound)
+			testBulk(t, ctx, db, newTestEntity("1"), mongox.M{"id": "5"}, mongox.ErrNotFound)
+		}
+	})
+
+	t.Run("BulkError", func(t *testing.T) {
+		coll := db.Collection(bulkCollection)
+		bulker := mongox.NewBulkBuilder()
+		bulker.DeleteOne(mongox.M{"id": "1"})
+
+		err := mongox.BulkWrite(ctx, coll, bulker.Models(), false)
+		if err != nil {
+			t.Error(err)
+		}
+
+		err = mongox.BulkWrite(ctx, coll, bulker.Models(), true)
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected error %v, got %v", mongox.ErrNotFound, err)
+		}
+	})
+}
+
 func TestError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -542,13 +639,11 @@ func TestError(t *testing.T) {
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
-		// TODO: check other errors
 
 		err = coll.CreateTextIndex(ctx, "")
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
-		// TODO: check other errors
 
 		err = coll.FindOne(ctx, nil, nil)
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
@@ -652,6 +747,16 @@ func TestError(t *testing.T) {
 		err = coll.DeleteMany(ctx, nil)
 		if !errors.Is(err, mongox.ErrNotFound) {
 			t.Errorf("expected error %v, got %v", mongox.ErrNotFound, err)
+		}
+
+		err = coll.BulkWrite(ctx, nil, false)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
+		}
+
+		err = coll.BulkWrite(ctx, []mongo.WriteModel{mongo.NewDeleteManyModel(), nil}, false)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 	})
 
@@ -788,6 +893,11 @@ func TestError(t *testing.T) {
 		})
 		if err != nil {
 			t.Error(err)
+		}
+
+		err = coll.BulkWrite(ctx, []mongo.WriteModel{mongo.NewDeleteManyModel()}, false)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 	})
 
@@ -1165,9 +1275,15 @@ func TestAsync(t *testing.T) {
 		// error
 		queueColl.Insert([]any{entity2, nil})
 
-		for i := 0; i < 6; i++ {
+		for i := 0; i < 3; i++ {
 			queueColl.Insert(entity)
 		}
+
+		bulk := mongox.NewBulkBuilder()
+		for i := 0; i < 3; i++ {
+			bulk.Insert(entity)
+		}
+		queueColl.BulkWrite(bulk.Models(), false)
 
 		queueColl.Upsert(entity2, mongox.M{"id": "2"})
 		queueColl.ReplaceOne(entity3, mongox.M{"id": "2"})
@@ -1339,6 +1455,10 @@ func testFindOne(t *testing.T, ctx context.Context, db *mongox.Database, entity 
 
 func testUpdate(t *testing.T, ctx context.Context, db *mongox.Database, entity testEntity, filter mongox.M, err2 ...error) {
 	testOne(t, ctx, db.Collection(updateCollection), entity, filter, err2...)
+}
+
+func testBulk(t *testing.T, ctx context.Context, db *mongox.Database, entity testEntity, filter mongox.M, err2 ...error) {
+	testOne(t, ctx, db.Collection(bulkCollection), entity, filter, err2...)
 }
 
 func testAsync(t *testing.T, ctx context.Context, db *mongox.Database, entity testEntity, filter mongox.M, err2 ...error) {

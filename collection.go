@@ -290,6 +290,24 @@ func (m *Collection) DeleteMany(ctx context.Context, filter M) error {
 	return nil
 }
 
+// BulkWrite executes bulk write operations in the collection.
+// Use [BulkBuilder] to create models for bulk write operations.
+// IsOrdered==true means that all operations are executed in the order they are added to the [BulkBuilder]
+// and if any of them fails, the whole operation fails.
+// IsOrdered==false means that all operations are executed in parallel and if any of them fails,
+// the whole operation continues.
+func (m *Collection) BulkWrite(ctx context.Context, models []mongo.WriteModel, isOrdered bool) error {
+	opts := options.BulkWrite().SetOrdered(isOrdered)
+	res, err := m.coll.BulkWrite(ctx, models, opts)
+	if err != nil {
+		return HandleMongoError(err)
+	}
+	if res != nil && res.MatchedCount+res.DeletedCount+res.InsertedCount+res.ModifiedCount == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (m *Collection) find(ctx context.Context, dest any, filter bson.D, rawOpts ...FindOptions) error {
 	findOpts := options.Find()
 	if len(rawOpts) > 0 {

@@ -2,6 +2,8 @@ package mongox
 
 import (
 	"context"
+
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // CreateIndex creates an index for a collection with the given field names.
@@ -138,4 +140,14 @@ func DeleteOne(ctx context.Context, coll *Collection, filter M) error {
 // It returns ErrNotFound if no document is deleted.
 func DeleteMany(ctx context.Context, coll *Collection, filter M) error {
 	return coll.DeleteMany(ctx, filter)
+}
+
+// BulkWrite executes bulk write operations in the collection.
+// Use [BulkBuilder] to create models for bulk write operations.
+// IsOrdered==true means that all operations are executed in the order they are added to the [BulkBuilder]
+// and if any of them fails, the whole operation fails.
+// IsOrdered==false means that all operations are executed in parallel and if any of them fails,
+// the whole operation continues.
+func BulkWrite(ctx context.Context, coll *Collection, models []mongo.WriteModel, isOrdered bool) error {
+	return coll.BulkWrite(ctx, models, isOrdered)
 }

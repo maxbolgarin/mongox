@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/maxbolgarin/gorder"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // DefaultAsyncRetries is the maximum number of retries for failed tasks in async mode.
@@ -201,6 +202,18 @@ func (ac *AsyncCollection) DeleteMany(queueKey, taskName string, filter M) {
 	})
 }
 
+// BulkWrite executes bulk write operations in the collection asynchronously without waiting for them to complete.
+// Use [BulkBuilder] to create models for bulk write operations.
+// IsOrdered==true means that all operations are executed in the order they are added to the [BulkBuilder]
+// and if any of them fails, the whole operation fails.
+// IsOrdered==false means that all operations are executed in parallel and if any of them fails,
+// the whole operation continues.
+func (ac *AsyncCollection) BulkWrite(queueKey, taskName string, models []mongo.WriteModel, isOrdered bool) {
+	ac.push(queueKey, taskName, "bulk_write", func(ctx context.Context) error {
+		return ac.coll.BulkWrite(ctx, models, isOrdered)
+	})
+}
+
 func (ac *AsyncCollection) push(queueKey, taskName, opName string, f gorder.TaskFunc) {
 	if queueKey == "" {
 		queueKey = ac.coll.coll.Name()
@@ -340,4 +353,14 @@ func (qc *QueueCollection) DeleteOne(filter M) {
 // It filters errors and won't retry in case of ErrNotFound, ErrInvalidArgument and some other errors.
 func (qc *QueueCollection) DeleteMany(filter M) {
 	qc.AsyncCollection.DeleteMany(qc.name, "", filter)
+}
+
+// BulkWrite executes bulk write operations in the collection asynchronously without waiting for them to complete.
+// Use [BulkBuilder] to create models for bulk write operations.
+// IsOrdered==true means that all operations are executed in the order they are added to the [BulkBuilder]
+// and if any of them fails, the whole operation fails.
+// IsOrdered==false means that all operations are executed in parallel and if any of them fails,
+// the whole operation continues.
+func (qc *QueueCollection) BulkWrite(models []mongo.WriteModel, isOrdered bool) {
+	qc.AsyncCollection.BulkWrite(qc.name, "", models, isOrdered)
 }
