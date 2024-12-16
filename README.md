@@ -93,13 +93,13 @@ type User struct {
 user := User{Name: "Alice", Age: 30}
 
 // Insert a single document
-err := collection.Insert(ctx, user)
+_, err := collection.Insert(ctx, user)
 if err != nil {
     return err
 }
 
 // Insert multiple documents
-err = collection.Insert(ctx,
+_, err = collection.Insert(ctx,
     User{Name: "Bob", Age: 30},
     User{Name: "Charlie", Age: 35},
 )
@@ -108,7 +108,7 @@ if err != nil {
 }
 
 // Insert with generic method
-err = mongox.Insert(ctx, collection, User{Name: "Mike", Age: 20})
+_, err = mongox.Insert(ctx, collection, User{Name: "Mike", Age: 20})
 if err != nil {
     return err
 }
@@ -170,7 +170,7 @@ record := User{
     Name: "Diana",
     Age:  28,
 }
-err = collection.Upsert(ctx, record, M{"name": "Alice"})
+_, err = collection.Upsert(ctx, record, M{"name": "Alice"})
 if err != nil {
     return err
 }
@@ -188,7 +188,7 @@ if err != nil {
 }
 
 // Delete multiple documents
-err = collection.DeleteMany(ctx, M{"age": mongox.Lt(30)})
+n, err = collection.DeleteMany(ctx, M{"age": mongox.Lt(30)})
 if err != nil {
     return err
 }
