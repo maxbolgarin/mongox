@@ -3,6 +3,7 @@ package mongox
 import (
 	"context"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -67,8 +68,9 @@ func Distinct[T any](ctx context.Context, coll *Collection, field string, filter
 }
 
 // Insert inserts a document(s) into the collection.
+// It returns IDs of the inserted documents.
 // Internally InsertMany uses bulk write.
-func Insert(ctx context.Context, coll *Collection, record ...any) error {
+func Insert(ctx context.Context, coll *Collection, record ...any) ([]bson.ObjectID, error) {
 	return coll.Insert(ctx, record...)
 }
 

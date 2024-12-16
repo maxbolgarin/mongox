@@ -162,17 +162,31 @@ func (m *Collection) Distinct(ctx context.Context, dest any, field string, filte
 }
 
 // Insert inserts a document or many documents into the collection.
+// It returns IDs of the inserted documents.
 // Internally InsertMany uses bulk write.
-func (m *Collection) Insert(ctx context.Context, records ...any) (err error) {
+func (m *Collection) Insert(ctx context.Context, records ...any) (ids []bson.ObjectID, err error) {
 	if len(records) == 0 {
-		return nil
+		return nil, nil
 	}
+
+	ids = make([]bson.ObjectID, len(records))
 	if len(records) == 1 {
-		_, err = m.coll.InsertOne(ctx, records[0])
+		res, err := m.coll.InsertOne(ctx, records[0])
+		if err != nil {
+			return nil, HandleMongoError(err)
+		}
+		ids[0], _ = res.InsertedID.(bson.ObjectID)
+
 	} else {
-		_, err = m.coll.InsertMany(ctx, records)
+		res, err := m.coll.InsertMany(ctx, records)
+		if err != nil {
+			return nil, HandleMongoError(err)
+		}
+		for i, id := range res.InsertedIDs {
+			ids[i], _ = id.(bson.ObjectID)
+		}
 	}
-	return HandleMongoError(err)
+	return ids, nil
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.

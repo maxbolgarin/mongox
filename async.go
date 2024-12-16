@@ -100,7 +100,8 @@ type AsyncCollection struct {
 // Tasks in different queues will be executed in parallel.
 func (ac *AsyncCollection) Insert(queueKey, taskName string, records ...any) {
 	ac.push(queueKey, taskName, "insert", func(ctx context.Context) error {
-		return ac.coll.Insert(ctx, records...)
+		_, err := ac.coll.Insert(ctx, records...)
+		return err
 	})
 }
 

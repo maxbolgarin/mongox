@@ -23,8 +23,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-// TODO: async
-
 var client *mongox.Client
 
 const (
@@ -61,11 +59,11 @@ func TestIndexAndText(t *testing.T) {
 			t.Error(err)
 		}
 		entity1 := newTestEntity("1")
-		err = db.Collection(indexSingleCollection).Insert(ctx, entity1)
+		_, err = db.Collection(indexSingleCollection).Insert(ctx, entity1)
 		if err != nil {
 			t.Error(err)
 		}
-		err = db.Collection(indexSingleCollection).Insert(ctx, entity1)
+		_, err = db.Collection(indexSingleCollection).Insert(ctx, entity1)
 		if err == nil {
 			t.Error("expected error, got nil")
 		}
@@ -82,19 +80,19 @@ func TestIndexAndText(t *testing.T) {
 			t.Error(err)
 		}
 		entity1 := newTestEntity("1")
-		err = db.Collection(indexManyCollection).Insert(ctx, entity1)
+		_, err = db.Collection(indexManyCollection).Insert(ctx, entity1)
 		if err != nil {
 			t.Error(err)
 		}
-		err = db.Collection(indexManyCollection).Insert(ctx, entity1)
+		_, err = db.Collection(indexManyCollection).Insert(ctx, entity1)
 		if err == nil {
 			t.Error("expected error, got nil")
 		}
-		err = db.Collection(indexManyCollection).Insert(ctx, newTestEntity("1"))
+		_, err = db.Collection(indexManyCollection).Insert(ctx, newTestEntity("1"))
 		if err != nil {
 			t.Error(err)
 		}
-		err = db.Collection(indexManyCollection).Insert(ctx, newTestEntity("1"), newTestEntity("1"), newTestEntity("1"))
+		_, err = db.Collection(indexManyCollection).Insert(ctx, newTestEntity("1"), newTestEntity("1"), newTestEntity("1"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -103,14 +101,14 @@ func TestIndexAndText(t *testing.T) {
 	t.Run("Text", func(t *testing.T) {
 		entity1 := newTestEntity("1")
 		entity1.Name = "Running tool: /usr/local/go/bin/go test -timeout 45s -run ^TestFind$ github.com/maxbolgarin/mongox"
-		err := db.Collection(textCollection).Insert(ctx, entity1)
+		_, err := db.Collection(textCollection).Insert(ctx, entity1)
 		if err != nil {
 			t.Error(err)
 		}
 
 		entity2 := newTestEntity("2")
 		entity2.Name = "Pairs in tool must be in the form NewF(key1, value1, key2, value2, ...)"
-		err = db.Collection(textCollection).Insert(ctx, entity2)
+		_, err = db.Collection(textCollection).Insert(ctx, entity2)
 		if err != nil {
 			t.Error(err)
 		}
@@ -170,7 +168,7 @@ func TestInsertFindDelete(t *testing.T) {
 	t.Run("FindOne_Replace_Upsert_DeleteOne", func(t *testing.T) {
 		entity1 := newTestEntity("1")
 		_, err := db.WithTransaction(ctx, func(ctx context.Context) (any, error) {
-			err := db.Collection(findOneCollection).Insert(ctx, entity1)
+			_, err := db.Collection(findOneCollection).Insert(ctx, entity1)
 			if err != nil {
 				return nil, err
 			}
@@ -181,16 +179,16 @@ func TestInsertFindDelete(t *testing.T) {
 			t.Errorf("expected error %v, got %v", mongox.ErrIllegalOperation, err)
 		}
 
-		err = db.Collection(findOneCollection).Insert(ctx, entity1)
+		_, err = db.Collection(findOneCollection).Insert(ctx, entity1)
 		if err != nil {
 			t.Error(err)
 		}
 		entity2 := newTestEntity("2")
-		err = mongox.Insert(ctx, db.Collection(findOneCollection), entity2)
+		_, err = mongox.Insert(ctx, db.Collection(findOneCollection), entity2)
 		if err != nil {
 			t.Error(err)
 		}
-		err = db.Collection(findOneCollection).Insert(ctx, newTestEntity("3"), newTestEntity("4"))
+		_, err = db.Collection(findOneCollection).Insert(ctx, newTestEntity("3"), newTestEntity("4"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -254,7 +252,7 @@ func TestInsertFindDelete(t *testing.T) {
 
 	t.Run("Find_DeleteMany", func(t *testing.T) {
 		entity2, entity3, entity4 := newTestEntity("2"), newTestEntity("3"), newTestEntity("4")
-		err := db.Collection(findCollection).Insert(ctx, entity2, entity3, entity4)
+		_, err := db.Collection(findCollection).Insert(ctx, entity2, entity3, entity4)
 		if err != nil {
 			t.Error(err)
 		}
@@ -295,7 +293,7 @@ func TestInsertFindDelete(t *testing.T) {
 		}
 
 		for i := 0; i < 10; i++ {
-			err = db.Collection(findAllCollection).Insert(ctx, newTestEntity(strconv.Itoa(i)), newTestEntity(strconv.Itoa(i)),
+			_, err = db.Collection(findAllCollection).Insert(ctx, newTestEntity(strconv.Itoa(i)), newTestEntity(strconv.Itoa(i)),
 				newTestEntity(strconv.Itoa(i)), newTestEntity(strconv.Itoa(i)), newTestEntity(strconv.Itoa(i)), newTestEntity(strconv.Itoa(i)),
 				newTestEntity(strconv.Itoa(i)), newTestEntity(strconv.Itoa(i)), newTestEntity(strconv.Itoa(i)), newTestEntity(strconv.Itoa(i)))
 			if err != nil {
@@ -400,7 +398,7 @@ func TestUpdate(t *testing.T) {
 			f      = mongox.M{"id": "1"}
 		)
 
-		err := coll.Insert(ctx, entity)
+		_, err := coll.Insert(ctx, entity)
 		if err != nil {
 			t.Error(err)
 		}
@@ -439,7 +437,7 @@ func TestUpdate(t *testing.T) {
 		entity.Name = ""
 		testUpdate(t, ctx, db, entity, mongox.M{"name": nil})
 
-		err = coll.Insert(ctx, entity, entity, entity, entity, entity, entity, entity, entity, entity)
+		_, err = coll.Insert(ctx, entity, entity, entity, entity, entity, entity, entity, entity, entity)
 		if err != nil {
 			t.Error(err)
 		}
@@ -477,7 +475,7 @@ func TestUpdate(t *testing.T) {
 		}
 
 		newEntity := newTestEntity("1")
-		err = coll.Insert(ctx, newEntity)
+		_, err = coll.Insert(ctx, newEntity)
 		if err != nil {
 			t.Error(err)
 		}
@@ -630,7 +628,7 @@ func TestError(t *testing.T) {
 	t.Run("Error_NilArguments", func(t *testing.T) {
 		coll := db.Collection(errorNilArgCollection)
 
-		err := coll.Insert(ctx, newTestEntity("1"))
+		_, err := coll.Insert(ctx, newTestEntity("1"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -677,12 +675,12 @@ func TestError(t *testing.T) {
 			t.Error(err)
 		}
 
-		err = coll.Insert(ctx, nil)
+		_, err = coll.Insert(ctx, nil)
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.Insert(ctx, []any{newTestEntity("2"), nil})
+		_, err = coll.Insert(ctx, []any{newTestEntity("2"), nil})
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
@@ -733,7 +731,7 @@ func TestError(t *testing.T) {
 			t.Errorf("expected error %v, got %v", mongox.ErrNotFound, err)
 		}
 
-		err = coll.Insert(ctx, newTestEntity("1"))
+		_, err = coll.Insert(ctx, newTestEntity("1"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -763,7 +761,7 @@ func TestError(t *testing.T) {
 	t.Run("Error_InvalidArguments", func(t *testing.T) {
 		coll := db.Collection(errorInvalidArgCollection)
 
-		err := coll.Insert(ctx, newTestEntity("1"))
+		_, err := coll.Insert(ctx, newTestEntity("1"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -811,12 +809,12 @@ func TestError(t *testing.T) {
 			t.Error(err)
 		}
 
-		err = coll.Insert(ctx, 1)
+		_, err = coll.Insert(ctx, 1)
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.Insert(ctx, []any{newTestEntity("2"), 1})
+		_, err = coll.Insert(ctx, []any{newTestEntity("2"), 1})
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
@@ -904,7 +902,7 @@ func TestError(t *testing.T) {
 	t.Run("Error_InvalidFilter", func(t *testing.T) {
 		coll := db.Collection(errorInvalidFilterCollection)
 
-		err := coll.Insert(ctx, newTestEntity("1"))
+		_, err := coll.Insert(ctx, newTestEntity("1"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -959,7 +957,7 @@ func TestError(t *testing.T) {
 	t.Run("Error_InvalidUpdate", func(t *testing.T) {
 		coll := db.Collection(errorInvalidUpdCollection)
 
-		err := coll.Insert(ctx, newTestEntity("1"))
+		_, err := coll.Insert(ctx, newTestEntity("1"))
 		if err != nil {
 			t.Error(err)
 		}
@@ -1237,11 +1235,11 @@ func TestError(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		err = coll.Insert(ctx, newTestEntity("1"))
+		_, err = coll.Insert(ctx, newTestEntity("1"))
 		if err != nil {
 			t.Error(err)
 		}
-		err = coll.Insert(ctx, newTestEntity("1"))
+		_, err = coll.Insert(ctx, newTestEntity("1"))
 		if !errors.Is(err, mongox.ErrDuplicate) {
 			t.Errorf("expected error %v, got %v", mongox.ErrDuplicateKey, err)
 		}
