@@ -229,7 +229,7 @@ func TestInsertFindDelete(t *testing.T) {
 		testFindOne(t, ctx, db, entity1, mongox.M{"number": entity1.Number})
 
 		testFindOne(t, ctx, db, entity2, mongox.NewM("id", "2"))
-		if err := mongox.Upsert(ctx, db.Collection(findOneCollection), entity1, mongox.M{"id": "2"}); err != nil {
+		if _, err := mongox.Upsert(ctx, db.Collection(findOneCollection), entity1, mongox.M{"id": "2"}); err != nil {
 			t.Error(err)
 		}
 		testFindOne(t, ctx, db, entity1, mongox.NewM("id", "2"), mongox.ErrNotFound)
@@ -269,17 +269,25 @@ func TestInsertFindDelete(t *testing.T) {
 
 		testFind(t, ctx, db, []testEntity{entity3, entity4}, mongox.M{mongox.Or: mongox.M{"id": "3", "name": entity4.Name}}, mongox.ErrBadValue)
 
-		if err := db.Collection(findCollection).DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.In: []string{"2", "3"}}}); err != nil {
+		n, err := db.Collection(findCollection).DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.In: []string{"2", "3"}}})
+		if err != nil {
 			t.Error(err)
+		}
+		if n != 2 {
+			t.Errorf("expected %d, got %d", 2, n)
 		}
 		testFind(t, ctx, db, []testEntity{}, mongox.M{"id": mongox.M{mongox.In: []string{"2", "3"}}})
 
-		if err := mongox.DeleteMany(ctx, db.Collection(findCollection), nil); err != nil {
+		n, err = mongox.DeleteMany(ctx, db.Collection(findCollection), nil)
+		if err != nil {
 			t.Error(err)
+		}
+		if n == 0 {
+			t.Errorf("expected not zero, got %d", n)
 		}
 		testFind(t, ctx, db, []testEntity{}, nil)
 
-		err = mongox.DeleteMany(ctx, db.Collection(findCollection), nil)
+		_, err = mongox.DeleteMany(ctx, db.Collection(findCollection), nil)
 		if !errors.Is(err, mongox.ErrNotFound) {
 			t.Errorf("expected error %v, got %v", mongox.ErrNotFound, err)
 		}
@@ -452,9 +460,12 @@ func TestUpdate(t *testing.T) {
 			t.Errorf("expected 10, got %d", len(results))
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Set: mongox.M{"id": "2"}})
+		n, err := coll.UpdateMany(ctx, f, mongox.M{mongox.Set: mongox.M{"id": "2"}})
 		if err != nil {
 			t.Error(err)
+		}
+		if n != 10 {
+			t.Errorf("expected 10, got %d", n)
 		}
 
 		results = nil
@@ -558,7 +569,7 @@ func TestBulk(t *testing.T) {
 			bulker.DeleteOne(mongox.M{"id": "3"})
 			bulker.DeleteMany(mongox.M{"id": mongox.M{mongox.In: []any{"4", "5"}}})
 
-			err := mongox.BulkWrite(ctx, coll, bulker.Models(), isOrdered)
+			_, err := mongox.BulkWrite(ctx, coll, bulker.Models(), isOrdered)
 			if err != nil {
 				t.Error(err)
 			}
@@ -607,14 +618,40 @@ func TestBulk(t *testing.T) {
 		bulker := mongox.NewBulkBuilder()
 		bulker.DeleteOne(mongox.M{"id": "1"})
 
-		err := mongox.BulkWrite(ctx, coll, bulker.Models(), false)
+		_, err := mongox.BulkWrite(ctx, coll, bulker.Models(), false)
 		if err != nil {
 			t.Error(err)
 		}
 
-		err = mongox.BulkWrite(ctx, coll, bulker.Models(), true)
+		_, err = mongox.BulkWrite(ctx, coll, bulker.Models(), true)
 		if !errors.Is(err, mongox.ErrNotFound) {
 			t.Errorf("expected error %v, got %v", mongox.ErrNotFound, err)
+		}
+
+		bulker.Insert(mongox.M{"id": "1"})
+
+		_, err = mongox.BulkWrite(ctx, coll, bulker.Models(), false)
+		if err != nil {
+			t.Error(err)
+		}
+
+		_, err = mongox.BulkWrite(ctx, coll, bulker.Models(), true)
+		if err != nil {
+			t.Error(err)
+		}
+
+		bulker = mongox.NewBulkBuilder()
+		bulker.Insert(mongox.M{"id": "1"})
+		bulker.DeleteOne(mongox.M{"id": "2"})
+
+		_, err = mongox.BulkWrite(ctx, coll, bulker.Models(), false)
+		if err != nil {
+			t.Error(err)
+		}
+
+		_, err = mongox.BulkWrite(ctx, coll, bulker.Models(), true)
+		if err != nil {
+			t.Error(err)
 		}
 	})
 }
@@ -685,7 +722,7 @@ func TestError(t *testing.T) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.Upsert(ctx, nil, nil)
+		_, err = coll.Upsert(ctx, nil, nil)
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
@@ -705,7 +742,7 @@ func TestError(t *testing.T) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.UpdateMany(ctx, nil, nil)
+		_, err = coll.UpdateMany(ctx, nil, nil)
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
@@ -737,22 +774,22 @@ func TestError(t *testing.T) {
 		}
 
 		// No error
-		err = coll.DeleteMany(ctx, nil)
+		_, err = coll.DeleteMany(ctx, nil)
 		if err != nil {
 			t.Error(err)
 		}
 
-		err = coll.DeleteMany(ctx, nil)
+		_, err = coll.DeleteMany(ctx, nil)
 		if !errors.Is(err, mongox.ErrNotFound) {
 			t.Errorf("expected error %v, got %v", mongox.ErrNotFound, err)
 		}
 
-		err = coll.BulkWrite(ctx, nil, false)
+		_, err = coll.BulkWrite(ctx, nil, false)
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.BulkWrite(ctx, []mongo.WriteModel{mongo.NewDeleteManyModel(), nil}, false)
+		_, err = coll.BulkWrite(ctx, []mongo.WriteModel{mongo.NewDeleteManyModel(), nil}, false)
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
@@ -819,7 +856,7 @@ func TestError(t *testing.T) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.Upsert(ctx, 1, nil)
+		_, err = coll.Upsert(ctx, 1, nil)
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
@@ -893,7 +930,7 @@ func TestError(t *testing.T) {
 			t.Error(err)
 		}
 
-		err = coll.BulkWrite(ctx, []mongo.WriteModel{mongo.NewDeleteManyModel()}, false)
+		_, err = coll.BulkWrite(ctx, []mongo.WriteModel{mongo.NewDeleteManyModel()}, false)
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
@@ -928,7 +965,7 @@ func TestError(t *testing.T) {
 		if err = coll.Distinct(ctx, nil, "f", f); err != nil {
 			t.Error(err)
 		}
-		if err = coll.Upsert(ctx, entity, f); !errors.Is(err, mongox.ErrNotFound) {
+		if _, err = coll.Upsert(ctx, entity, f); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
 		}
 		if err = coll.ReplaceOne(ctx, entity, f); !errors.Is(err, mongox.ErrNotFound) {
@@ -940,7 +977,7 @@ func TestError(t *testing.T) {
 		if err = coll.UpdateOne(ctx, f, upd); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
 		}
-		if err = coll.UpdateMany(ctx, f, upd); !errors.Is(err, mongox.ErrNotFound) {
+		if _, err = coll.UpdateMany(ctx, f, upd); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
 		}
 		if err = mongox.DeleteFields(ctx, coll, f); !errors.Is(err, mongox.ErrNotFound) {
@@ -949,7 +986,7 @@ func TestError(t *testing.T) {
 		if err = mongox.DeleteOne(ctx, coll, f); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
 		}
-		if err = mongox.DeleteMany(ctx, coll, f); !errors.Is(err, mongox.ErrNotFound) {
+		if _, err = mongox.DeleteMany(ctx, coll, f); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
 		}
 	})
@@ -1079,106 +1116,106 @@ func TestError(t *testing.T) {
 
 		//
 
-		err = coll.UpdateMany(ctx, f, mongox.M{"a": "b"})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{"a": "b"})
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{"a": "b"})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{"a": "b"})
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{"id": mongox.CurrentDate})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{"id": mongox.CurrentDate})
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Inc: "id"})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Inc: "id"})
 		if !errors.Is(err, mongox.ErrFailedToParse) {
 			t.Errorf("expected error %v, got %v", mongox.ErrFailedToParse, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Min: "id"})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Min: "id"})
 		if !errors.Is(err, mongox.ErrFailedToParse) {
 			t.Errorf("expected error %v, got %v", mongox.ErrFailedToParse, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Mul: "id"})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Mul: "id"})
 		if !errors.Is(err, mongox.ErrFailedToParse) {
 			t.Errorf("expected error %v, got %v", mongox.ErrFailedToParse, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Rename: "id"})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Rename: "id"})
 		if !errors.Is(err, mongox.ErrFailedToParse) {
 			t.Errorf("expected error %v, got %v", mongox.ErrFailedToParse, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Pop: "id"})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Pop: "id"})
 		if !errors.Is(err, mongox.ErrFailedToParse) {
 			t.Errorf("expected error %v, got %v", mongox.ErrFailedToParse, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Push: "id"})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Push: "id"})
 		if !errors.Is(err, mongox.ErrFailedToParse) {
 			t.Errorf("expected error %v, got %v", mongox.ErrFailedToParse, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.AddToSet: "id"})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.AddToSet: "id"})
 		if !errors.Is(err, mongox.ErrFailedToParse) {
 			t.Errorf("expected error %v, got %v", mongox.ErrFailedToParse, err)
 		}
 
 		//
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Inc: mongox.M{"id": ""}})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Inc: mongox.M{"id": ""}})
 		if !errors.Is(err, mongox.ErrTypeMismatch) {
 			t.Errorf("expected error %v, got %v", mongox.ErrTypeMismatch, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Inc: mongox.M{"number": ""}})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Inc: mongox.M{"number": ""}})
 		if !errors.Is(err, mongox.ErrTypeMismatch) {
 			t.Errorf("expected error %v, got %v", mongox.ErrTypeMismatch, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Inc: mongox.M{"number": "1"}})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Inc: mongox.M{"number": "1"}})
 		if !errors.Is(err, mongox.ErrTypeMismatch) {
 			t.Errorf("expected error %v, got %v", mongox.ErrTypeMismatch, err)
 		}
 
 		// No error
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Min: mongox.M{"number": ""}})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Min: mongox.M{"number": ""}})
 		if err != nil {
 			t.Error(err)
 		}
 
-		err = mongox.UpdateMany(ctx, coll, f, mongox.M{mongox.Mul: mongox.M{"number": ""}})
+		_, err = mongox.UpdateMany(ctx, coll, f, mongox.M{mongox.Mul: mongox.M{"number": ""}})
 		if !errors.Is(err, mongox.ErrTypeMismatch) {
 			t.Errorf("expected error %v, got %v", mongox.ErrTypeMismatch, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Rename: mongox.M{"number": ""}})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Rename: mongox.M{"number": ""}})
 		if !errors.Is(err, mongox.ErrInvalidArgument) {
 			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Pop: mongox.M{"number": ""}})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Pop: mongox.M{"number": ""}})
 		if !errors.Is(err, mongox.ErrFailedToParse) {
 			t.Errorf("expected error %v, got %v", mongox.ErrFailedToParse, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.Push: mongox.M{"number": ""}})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.Push: mongox.M{"number": ""}})
 		if !errors.Is(err, mongox.ErrBadValue) {
 			t.Errorf("expected error %v, got %v", mongox.ErrBadValue, err)
 		}
 
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.AddToSet: mongox.M{"number": ""}})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.AddToSet: mongox.M{"number": ""}})
 		if !errors.Is(err, mongox.ErrBadValue) {
 			t.Errorf("expected error %v, got %v", mongox.ErrBadValue, err)
 		}
 
 		// No error
-		err = coll.UpdateMany(ctx, f, mongox.M{mongox.AddToSet: mongox.M{"slice": newTestEntity("1")}})
+		_, err = coll.UpdateMany(ctx, f, mongox.M{mongox.AddToSet: mongox.M{"slice": newTestEntity("1")}})
 		if err != nil {
 			t.Error(err)
 		}

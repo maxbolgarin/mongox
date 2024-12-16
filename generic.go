@@ -67,7 +67,7 @@ func Distinct[T any](ctx context.Context, coll *Collection, field string, filter
 	return result, nil
 }
 
-// Insert inserts a document(s) into the collection.
+// Insert inserts a document(s) into the collection
 // It returns IDs of the inserted documents.
 // Internally InsertMany uses bulk write.
 func Insert(ctx context.Context, coll *Collection, record ...any) ([]bson.ObjectID, error) {
@@ -75,8 +75,10 @@ func Insert(ctx context.Context, coll *Collection, record ...any) ([]bson.Object
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.
-// It returns ErrNotFound if no document is updated.
-func Upsert(ctx context.Context, coll *Collection, record any, filter M) error {
+// It returns ID of the inserted document.
+// If existing document is updated (no new inserted), it returns nil ID and nil error.
+// If no document is updated, it returns nil ID and ErrNotFound.
+func Upsert(ctx context.Context, coll *Collection, record any, filter M) (*bson.ObjectID, error) {
 	return coll.Upsert(ctx, record, filter)
 }
 
@@ -106,8 +108,9 @@ func UpdateOne(ctx context.Context, coll *Collection, filter, update M) error {
 // Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}.
 // Modifiers operate on fields. For example: {$mod: {<field>: ...}}.
 // You can use predefined options from mongox, e.g. mongox.M{mongox.Inc: mongox.M{"number": 1}}.
+// It returns number of updated documents.
 // It returns ErrNotFound if no document is updated.
-func UpdateMany(ctx context.Context, coll *Collection, filter, update M) error {
+func UpdateMany(ctx context.Context, coll *Collection, filter, update M) (int, error) {
 	return coll.UpdateMany(ctx, filter, update)
 }
 
@@ -139,17 +142,19 @@ func DeleteOne(ctx context.Context, coll *Collection, filter M) error {
 }
 
 // DeleteMany deletes documents in the collection based on the filter.
+// It returns number of deleted documents.
 // It returns ErrNotFound if no document is deleted.
-func DeleteMany(ctx context.Context, coll *Collection, filter M) error {
+func DeleteMany(ctx context.Context, coll *Collection, filter M) (int, error) {
 	return coll.DeleteMany(ctx, filter)
 }
 
 // BulkWrite executes bulk write operations in the collection.
 // Use [BulkBuilder] to create models for bulk write operations.
 // IsOrdered==true means that all operations are executed in the order they are added to the [BulkBuilder]
-// and if any of them fails, the whole operation fails.
+// and if any of them fails, the whole operation fails. Error is not returning.
 // IsOrdered==false means that all operations are executed in parallel and if any of them fails,
-// the whole operation continues.
-func BulkWrite(ctx context.Context, coll *Collection, models []mongo.WriteModel, isOrdered bool) error {
+// the whole operation continues. Error is not returning.
+// It returns ErrNotFound if no document is matched/inserted/updated/deleted.
+func BulkWrite(ctx context.Context, coll *Collection, models []mongo.WriteModel, isOrdered bool) (mongo.BulkWriteResult, error) {
 	return coll.BulkWrite(ctx, models, isOrdered)
 }

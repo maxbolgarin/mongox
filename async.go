@@ -111,7 +111,8 @@ func (ac *AsyncCollection) Insert(queueKey, taskName string, records ...any) {
 // Tasks in different queues will be executed in parallel.
 func (ac *AsyncCollection) Upsert(queueKey, taskName string, record any, filter M) {
 	ac.push(queueKey, taskName, "upsert", func(ctx context.Context) error {
-		return ac.coll.Upsert(ctx, record, filter)
+		_, err := ac.coll.Upsert(ctx, record, filter)
+		return err
 	})
 }
 
@@ -158,7 +159,8 @@ func (ac *AsyncCollection) UpdateOne(queueKey, taskName string, filter, update M
 // Tasks in different queues will be executed in parallel.
 func (ac *AsyncCollection) UpdateMany(queueKey, taskName string, filter, update M) {
 	ac.push(queueKey, taskName, "update_many", func(ctx context.Context) error {
-		return ac.coll.UpdateMany(ctx, filter, update)
+		_, err := ac.coll.UpdateMany(ctx, filter, update)
+		return err
 	})
 }
 
@@ -199,7 +201,8 @@ func (ac *AsyncCollection) DeleteOne(queueKey, taskName string, filter M) {
 // Tasks in different queues will be executed in parallel.
 func (ac *AsyncCollection) DeleteMany(queueKey, taskName string, filter M) {
 	ac.push(queueKey, taskName, "delete_many", func(ctx context.Context) error {
-		return ac.coll.DeleteMany(ctx, filter)
+		_, err := ac.coll.DeleteMany(ctx, filter)
+		return err
 	})
 }
 
@@ -211,7 +214,8 @@ func (ac *AsyncCollection) DeleteMany(queueKey, taskName string, filter M) {
 // the whole operation continues.
 func (ac *AsyncCollection) BulkWrite(queueKey, taskName string, models []mongo.WriteModel, isOrdered bool) {
 	ac.push(queueKey, taskName, "bulk_write", func(ctx context.Context) error {
-		return ac.coll.BulkWrite(ctx, models, isOrdered)
+		_, err := ac.coll.BulkWrite(ctx, models, isOrdered)
+		return err
 	})
 }
 

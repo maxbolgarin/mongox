@@ -190,17 +190,25 @@ func (m *Collection) Insert(ctx context.Context, records ...any) (ids []bson.Obj
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.
-// It returns ErrNotFound if no document is updated.
-func (m *Collection) Upsert(ctx context.Context, record any, filter M) error {
+// It returns ID of the interserted document.
+// If existing document is updated (no new inserted), it returns nil ID and nil error.
+// If no document is updated, it returns nil ID and ErrNotFound.
+func (m *Collection) Upsert(ctx context.Context, record any, filter M) (*bson.ObjectID, error) {
 	opts := options.Replace().SetUpsert(true)
 	upd, err := m.coll.ReplaceOne(ctx, filter.Prepare(), record, opts)
 	if err != nil {
-		return HandleMongoError(err)
+		return nil, HandleMongoError(err)
 	}
-	if upd != nil && upd.MatchedCount == 0 {
-		return ErrNotFound
+	if upd != nil {
+		if upd.MatchedCount == 0 {
+			return nil, ErrNotFound
+		}
+		if upd.UpsertedID != nil {
+			id := upd.UpsertedID.(bson.ObjectID)
+			return &id, nil
+		}
 	}
-	return nil
+	return nil, nil
 }
 
 // ReplaceOne replaces a document in the collection.
@@ -236,16 +244,17 @@ func (m *Collection) UpdateOne(ctx context.Context, filter, update M) error {
 // Update map/document must contain key beginning with '$', e.g. {$set: {key1: value1}}.
 // Modifiers operate on fields. For example: {$mod: {<field>: ...}}.
 // You can use predefined options from mongox, e.g. mongox.M{mongox.Inc: mongox.M{"number": 1}}.
+// It returns number of updated documents.
 // It returns ErrNotFound if no document is updated.
-func (m *Collection) UpdateMany(ctx context.Context, filter, update M) error {
+func (m *Collection) UpdateMany(ctx context.Context, filter, update M) (int, error) {
 	updateResult, err := m.coll.UpdateMany(ctx, filter.Prepare(), update.Prepare())
 	if err != nil {
-		return HandleMongoError(err)
+		return 0, HandleMongoError(err)
 	}
 	if updateResult != nil && updateResult.MatchedCount == 0 {
-		return ErrNotFound
+		return 0, ErrNotFound
 	}
-	return nil
+	return int(updateResult.ModifiedCount), nil
 }
 
 // UpdateOneFromDiff sets fields in a document in the collection using diff structure.
@@ -292,34 +301,36 @@ func (m *Collection) DeleteOne(ctx context.Context, filter M) error {
 }
 
 // DeleteMany deletes many documents in the collection based on the filter.
+// It returns number of deleted documents.
 // It returns ErrNotFound if no document is deleted.
-func (m *Collection) DeleteMany(ctx context.Context, filter M) error {
+func (m *Collection) DeleteMany(ctx context.Context, filter M) (int, error) {
 	del, err := m.coll.DeleteMany(ctx, filter.Prepare())
 	if err != nil {
-		return HandleMongoError(err)
+		return 0, HandleMongoError(err)
 	}
 	if del != nil && del.DeletedCount == 0 {
-		return ErrNotFound
+		return 0, ErrNotFound
 	}
-	return nil
+	return int(del.DeletedCount), nil
 }
 
 // BulkWrite executes bulk write operations in the collection.
 // Use [BulkBuilder] to create models for bulk write operations.
 // IsOrdered==true means that all operations are executed in the order they are added to the [BulkBuilder]
-// and if any of them fails, the whole operation fails.
+// and if any of them fails, the whole operation fails. Error is not returning.
 // IsOrdered==false means that all operations are executed in parallel and if any of them fails,
-// the whole operation continues.
-func (m *Collection) BulkWrite(ctx context.Context, models []mongo.WriteModel, isOrdered bool) error {
+// the whole operation continues. Error is not returning.
+// It returns ErrNotFound if no document is matched/inserted/updated/deleted.
+func (m *Collection) BulkWrite(ctx context.Context, models []mongo.WriteModel, isOrdered bool) (mongo.BulkWriteResult, error) {
 	opts := options.BulkWrite().SetOrdered(isOrdered)
 	res, err := m.coll.BulkWrite(ctx, models, opts)
 	if err != nil {
-		return HandleMongoError(err)
+		return mongo.BulkWriteResult{}, HandleMongoError(err)
 	}
 	if res != nil && res.MatchedCount+res.DeletedCount+res.InsertedCount+res.ModifiedCount == 0 {
-		return ErrNotFound
+		return mongo.BulkWriteResult{}, ErrNotFound
 	}
-	return nil
+	return lang.Deref(res), nil
 }
 
 func (m *Collection) find(ctx context.Context, dest any, filter bson.D, rawOpts ...FindOptions) error {
