@@ -1332,6 +1332,7 @@ func TestAsync(t *testing.T) {
 		queueColl.UpdateOneFromDiff(mongox.M{"id": "3"}, diff)
 
 		queueColl.UpdateMany(mongox.M{"id": "1"}, mongox.M{mongox.Inc: mongox.M{"number": 1}})
+		queueColl.DeleteFields(mongox.M{"id": "3"}, "struct.name")
 		queueColl.DeleteOne(mongox.M{"number": entity.Number + 1})
 		queueColl.Insert(entity, entity, entity)
 		queueColl.DeleteMany(mongox.M{"number": entity.Number})
@@ -1388,6 +1389,7 @@ func TestAsync(t *testing.T) {
 		entity3.Name = "new-name"
 		entity3.Number++
 		entity3.Bool = !entity3.Bool
+		entity3.Struct.Name = ""
 		testAsync(t, ctx, db, entity3, mongox.M{"id": "3"})
 	})
 }

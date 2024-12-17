@@ -184,8 +184,18 @@ func (ac *AsyncCollection) UpdateOneFromDiff(queueKey, taskName string, filter M
 	})
 }
 
-// DeleteOne deletes a document in the collection asynchronously without waiting for it to complete.
+// DeleteFields deletes fields in a document in the collection asynchronously without waiting for it to complete.
 // For example: [key1, key2] becomes {$unset: {key1: "", key2: ""}}.
+// It start retrying in case of error for DefaultAsyncRetries times.
+// It filters errors and won't retry in case of ErrNotFound, ErrInvalidArgument and some other errors.
+// Tasks in different queues will be executed in parallel.
+func (ac *AsyncCollection) DeleteFields(queueKey, taskName string, filter M, fields ...string) {
+	ac.push(queueKey, taskName, "delete_fields", func(ctx context.Context) error {
+		return ac.coll.DeleteFields(ctx, filter, fields...)
+	})
+}
+
+// DeleteOne deletes a document in the collection asynchronously without waiting for it to complete.
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrInvalidArgument and some other errors.
 // Tasks in different queues will be executed in parallel.
@@ -345,8 +355,15 @@ func (qc *QueueCollection) UpdateOneFromDiff(filter M, diff any) {
 	qc.AsyncCollection.UpdateOneFromDiff(qc.name, "", filter, diff)
 }
 
-// DeleteOne deletes a document in the collection asynchronously without waiting for it to complete.
+// DeleteFields deletes fields in a document in the collection asynchronously without waiting for it to complete.
 // For example: [key1, key2] becomes {$unset: {key1: "", key2: ""}}.
+// It start retrying in case of error for DefaultAsyncRetries times.
+// It filters errors and won't retry in case of ErrNotFound, ErrInvalidArgument and some other errors.
+func (qc *QueueCollection) DeleteFields(filter M, fields ...string) {
+	qc.AsyncCollection.DeleteFields(qc.name, "", filter, fields...)
+}
+
+// DeleteOne deletes a document in the collection asynchronously without waiting for it to complete.
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrInvalidArgument and some other errors.
 func (qc *QueueCollection) DeleteOne(filter M) {
