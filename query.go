@@ -70,6 +70,9 @@ func diffToUpdates(diff any) (bson.D, error) {
 
 func processDiffStruct(diff any, parentField string) (map[string]any, error) {
 	req := reflect.ValueOf(diff)
+	if req.Kind() == reflect.Pointer {
+		req = req.Elem()
+	}
 	if req.Kind() != reflect.Struct {
 		return nil, errors.New("only struct fields are allowed")
 	}

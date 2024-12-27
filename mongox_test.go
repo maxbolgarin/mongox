@@ -514,7 +514,7 @@ func TestUpdate(t *testing.T) {
 			},
 		}
 
-		err = mongox.UpdateOneFromDiff(ctx, coll, mongox.M{"id": "1"}, updTestEntity)
+		err = mongox.UpdateOneFromDiff(ctx, coll, mongox.M{"id": "1"}, &updTestEntity)
 		if err != nil {
 			t.Error(err)
 		}
