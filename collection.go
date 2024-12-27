@@ -165,6 +165,13 @@ func (m *Collection) Distinct(ctx context.Context, dest any, field string, filte
 // It returns IDs of the inserted documents.
 // Internally InsertMany uses bulk write.
 func (m *Collection) Insert(ctx context.Context, records ...any) (ids []bson.ObjectID, err error) {
+	return m.InsertMany(ctx, records)
+}
+
+// InsertMany inserts many documents into the collection.
+// It returns IDs of the inserted documents.
+// Internally InsertMany uses bulk write.
+func (m *Collection) InsertMany(ctx context.Context, records []any) (ids []bson.ObjectID, err error) {
 	if len(records) == 0 {
 		return nil, nil
 	}

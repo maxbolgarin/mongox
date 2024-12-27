@@ -28,8 +28,13 @@ func (b *BulkBuilder) Models() []mongo.WriteModel {
 	return b.models
 }
 
-// Insert adds [mongo.InsertOneModel] to the [BulkBuilder] for every record in the slice.
+// Insert adds [mongo.InsertOneModel] to the [BulkBuilder] for every record in the variadic argument.
 func (b *BulkBuilder) Insert(records ...any) {
+	b.InsertMany(records)
+}
+
+// InsertMany adds [mongo.InsertOneModel] to the [BulkBuilder] for every record in the slice.
+func (b *BulkBuilder) InsertMany(records []any) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 

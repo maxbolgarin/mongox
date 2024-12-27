@@ -74,6 +74,13 @@ func Insert(ctx context.Context, coll *Collection, record ...any) ([]bson.Object
 	return coll.Insert(ctx, record...)
 }
 
+// InsertMany inserts many documents into the collection.
+// It returns IDs of the inserted documents.
+// Internally InsertMany uses bulk write.
+func InsertMany(ctx context.Context, coll *Collection, records []any) ([]bson.ObjectID, error) {
+	return coll.InsertMany(ctx, records)
+}
+
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.
 // It returns ID of the inserted document.
 // If existing document is updated (no new inserted), it returns nil ID and nil error.

@@ -92,7 +92,7 @@ func TestIndexAndText(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		_, err = db.Collection(indexManyCollection).Insert(ctx, newTestEntity("1"), newTestEntity("1"), newTestEntity("1"))
+		_, err = db.Collection(indexManyCollection).InsertMany(ctx, []any{newTestEntity("1"), newTestEntity("1"), newTestEntity("1")})
 		if err != nil {
 			t.Error(err)
 		}
@@ -1334,7 +1334,7 @@ func TestAsync(t *testing.T) {
 		queueColl.UpdateMany(mongox.M{"id": "1"}, mongox.M{mongox.Inc: mongox.M{"number": 1}})
 		queueColl.DeleteFields(mongox.M{"id": "3"}, "struct.name")
 		queueColl.DeleteOne(mongox.M{"number": entity.Number + 1})
-		queueColl.Insert(entity, entity, entity)
+		queueColl.InsertMany([]any{entity, entity, entity})
 		queueColl.DeleteMany(mongox.M{"number": entity.Number})
 
 		var (

@@ -105,6 +105,17 @@ func (ac *AsyncCollection) Insert(queueKey, taskName string, records ...any) {
 	})
 }
 
+// InsertMany inserts many documents into the collection asynchronously without waiting.
+// It start retrying in case of error for DefaultAsyncRetries times.
+// It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
+// Tasks in different queues will be executed in parallel.
+func (ac *AsyncCollection) InsertMany(queueKey, taskName string, records []any) {
+	ac.push(queueKey, taskName, "insert_many", func(ctx context.Context) error {
+		_, err := ac.coll.InsertMany(ctx, records)
+		return err
+	})
+}
+
 // Upsert replaces a document in the collection or inserts it if it doesn't exist asynchronously without waiting.
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrInvalidArgument and some other errors.
@@ -294,6 +305,13 @@ func (qc *QueueCollection) Queue() string {
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
 func (qc *QueueCollection) Insert(records ...any) {
 	qc.AsyncCollection.Insert(qc.name, "", records...)
+}
+
+// InsertMany inserts many documents into the collection asynchronously without waiting.
+// It start retrying in case of error for DefaultAsyncRetries times.
+// It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
+func (qc *QueueCollection) InsertMany(records []any) {
+	qc.AsyncCollection.InsertMany(qc.name, "", records)
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist asynchronously without waiting.
