@@ -94,6 +94,11 @@ type AsyncCollection struct {
 	log   gorder.Logger
 }
 
+// Name returns the name of the collection.
+func (ac *AsyncCollection) Name() string {
+	return ac.coll.Name()
+}
+
 // Insert inserts a document or many documents into the collection asynchronously without waiting.
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
@@ -293,6 +298,11 @@ type QueueCollection struct {
 // QueueCollection returns a new QueueCollection.
 func (qc *AsyncCollection) QueueCollection(name string) *QueueCollection {
 	return &QueueCollection{AsyncCollection: qc, name: name}
+}
+
+// Name returns the name of the collection.
+func (qc *QueueCollection) Name() string {
+	return qc.AsyncCollection.Name()
 }
 
 // Queue returns the queue key.

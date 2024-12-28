@@ -7,6 +7,11 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
+// Name returns the name of the collection.
+func Name(coll *Collection) string {
+	return coll.Name()
+}
+
 // CreateIndex creates an index for a collection with the given field names.
 // Field names are required and must be unique.
 func CreateIndex(ctx context.Context, coll *Collection, isUnique bool, fieldNames ...string) error {

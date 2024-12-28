@@ -664,6 +664,9 @@ func TestError(t *testing.T) {
 
 	t.Run("Error_NilArguments", func(t *testing.T) {
 		coll := db.Collection(errorNilArgCollection)
+		if coll.Name() != errorNilArgCollection {
+			t.Errorf("expected %v, got %v", errorNilArgCollection, coll.Name())
+		}
 
 		_, err := coll.Insert(ctx, newTestEntity("1"))
 		if err != nil {
@@ -1296,8 +1299,17 @@ func TestAsync(t *testing.T) {
 
 	t.Run("Async", func(t *testing.T) {
 		coll := db.Collection(asyncCollection)
+		if coll.Name() != asyncCollection {
+			t.Errorf("expected %v, got %v", asyncCollection, coll.Name())
+		}
 		asyncColl := asyncDB.AsyncCollection(asyncCollection)
 		queueColl := asyncColl.QueueCollection(asyncCollection)
+		if asyncColl.Name() != asyncCollection {
+			t.Errorf("expected %v, got %v", asyncCollection, asyncColl.Name())
+		}
+		if queueColl.Name() != asyncCollection {
+			t.Errorf("expected %v, got %v", asyncCollection, queueColl.Name())
+		}
 		entity := newTestEntity("1")
 		entity2 := newTestEntity("2")
 		entity3 := newTestEntity("3")

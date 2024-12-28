@@ -35,6 +35,11 @@ type Collection struct {
 	coll *mongo.Collection
 }
 
+// Name returns the name of the collection.
+func (m *Collection) Name() string {
+	return m.coll.Name()
+}
+
 // Collection returns an original mongo.Collection object.
 func (m *Collection) Collection() *mongo.Collection {
 	return m.coll
