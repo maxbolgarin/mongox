@@ -3,6 +3,7 @@ package mongox
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -79,7 +80,8 @@ func processDiffStruct(diff any, parentField string) (map[string]any, error) {
 
 	upd := make(map[string]any)
 	for n := 0; n < req.NumField(); n++ {
-		fieldName := req.Type().Field(n).Tag.Get("bson")
+		fieldNameRaw := req.Type().Field(n).Tag.Get("bson")
+		fieldName := strings.Split(fieldNameRaw, ",")[0]
 		if parentField != "" {
 			fieldName = parentField + "." + fieldName
 		}
