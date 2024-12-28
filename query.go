@@ -80,8 +80,9 @@ func processDiffStruct(diff any, parentField string) (map[string]any, error) {
 
 	upd := make(map[string]any)
 	for n := 0; n < req.NumField(); n++ {
-		fieldNameRaw := req.Type().Field(n).Tag.Get("bson")
-		fieldName := strings.Split(fieldNameRaw, ",")[0]
+		fieldNameRaw := strings.SplitN(req.Type().Field(n).Tag.Get("bson"), ",", 2)
+		fieldName := fieldNameRaw[0]
+
 		if parentField != "" {
 			fieldName = parentField + "." + fieldName
 		}
@@ -115,7 +116,11 @@ func processDiffStruct(diff any, parentField string) (map[string]any, error) {
 				continue
 			}
 
-			structUpd, err := processDiffStruct(field.Interface(), fieldName)
+			parentField := fieldName
+			if len(fieldNameRaw) > 1 && strings.Contains(fieldNameRaw[1], "inline") {
+				parentField = ""
+			}
+			structUpd, err := processDiffStruct(field.Interface(), parentField)
 			if err != nil {
 				continue
 			}

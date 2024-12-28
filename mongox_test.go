@@ -486,6 +486,9 @@ func TestUpdate(t *testing.T) {
 		}
 
 		newEntity := newTestEntity("1")
+		newEntity.InlineStruct = inlineStruct{
+			InlineField: "inline-field",
+		}
 		_, err = coll.Insert(ctx, newEntity)
 		if err != nil {
 			t.Error(err)
@@ -495,6 +498,7 @@ func TestUpdate(t *testing.T) {
 		testUpdate(t, ctx, db, newEntity, mongox.M{"number": newEntity.Number})
 		testUpdate(t, ctx, db, newEntity, mongox.M{"struct.name": newEntity.Struct.Name})
 		testUpdate(t, ctx, db, newEntity, mongox.M{"time": newEntity.Time})
+		testUpdate(t, ctx, db, newEntity, mongox.M{"inline_field": newEntity.InlineStruct.InlineField})
 
 		updTestEntity := struct {
 			Name   *string    `bson:"name"`
@@ -503,6 +507,9 @@ func TestUpdate(t *testing.T) {
 			Struct *struct {
 				Name *string `bson:"name"`
 			} `bson:"struct"`
+			InlineStruct *struct {
+				InlineField *string `bson:"inline_field"`
+			} `bson:"inline_struct,inline"`
 		}{
 			Name:   lang.Ptr("new-name"),
 			Number: lang.Ptr(9999999),
@@ -511,6 +518,11 @@ func TestUpdate(t *testing.T) {
 				Name *string `bson:"name"`
 			}{
 				Name: lang.Ptr("new-struct-name"),
+			},
+			InlineStruct: &struct {
+				InlineField *string `bson:"inline_field"`
+			}{
+				InlineField: lang.Ptr("new-inline-field"),
 			},
 		}
 
@@ -523,6 +535,7 @@ func TestUpdate(t *testing.T) {
 		testUpdate(t, ctx, db, newEntity, mongox.M{"number": newEntity.Number}, mongox.ErrNotFound)
 		testUpdate(t, ctx, db, newEntity, mongox.M{"struct.name": newEntity.Struct.Name}, mongox.ErrNotFound)
 		testUpdate(t, ctx, db, newEntity, mongox.M{"time": newEntity.Time}, mongox.ErrNotFound)
+		testUpdate(t, ctx, db, newEntity, mongox.M{"inline_field": newEntity.InlineStruct.InlineField}, mongox.ErrNotFound)
 
 		newEntity, err = mongox.FindOne[testEntity](ctx, coll, mongox.M{"id": "1"})
 		if err != nil {
@@ -533,6 +546,7 @@ func TestUpdate(t *testing.T) {
 		testUpdate(t, ctx, db, newEntity, mongox.M{"number": newEntity.Number})
 		testUpdate(t, ctx, db, newEntity, mongox.M{"struct.name": newEntity.Struct.Name})
 		testUpdate(t, ctx, db, newEntity, mongox.M{"time": newEntity.Time})
+		testUpdate(t, ctx, db, newEntity, mongox.M{"inline_field": newEntity.InlineStruct.InlineField})
 	})
 }
 
@@ -1563,20 +1577,25 @@ func testFind(t *testing.T, ctx context.Context, db *mongox.Database, entity []t
 }
 
 type testEntity struct {
-	ID     string         `bson:"id"`
-	Name   string         `bson:"name"`
-	Number int            `bson:"number"`
-	Bool   bool           `bson:"bool"`
-	Slice  []int          `bson:"slice"`
-	Array  [3]int         `bson:"array"`
-	Map    map[string]int `bson:"map"`
-	Time   time.Time      `bson:"time"`
-	Struct innerStruct    `bson:"struct"`
+	ID           string         `bson:"id"`
+	Name         string         `bson:"name,omitempty"`
+	Number       int            `bson:"number,omitempty"`
+	Bool         bool           `bson:"bool,omitempty"`
+	Slice        []int          `bson:"slice,omitempty"`
+	Array        [3]int         `bson:"array,omitempty"`
+	Map          map[string]int `bson:"map,omitempty"`
+	Time         time.Time      `bson:"time,omitempty"`
+	Struct       innerStruct    `bson:"struct,omitempty"`
+	InlineStruct inlineStruct   `bson:"inline_struct,inline"`
 }
 
 type innerStruct struct {
 	Name   string `bson:"name"`
 	Number int    `bson:"number"`
+}
+
+type inlineStruct struct {
+	InlineField string `bson:"inline_field"`
 }
 
 func newTestEntity(id string) testEntity {
