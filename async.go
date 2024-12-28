@@ -99,6 +99,11 @@ func (ac *AsyncCollection) Name() string {
 	return ac.coll.Name()
 }
 
+// Collection returns an original mongo.Collection object.
+func (ac *AsyncCollection) Collection() *mongo.Collection {
+	return ac.coll.Collection()
+}
+
 // Insert inserts a document or many documents into the collection asynchronously without waiting.
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
@@ -303,6 +308,11 @@ func (qc *AsyncCollection) QueueCollection(name string) *QueueCollection {
 // Name returns the name of the collection.
 func (qc *QueueCollection) Name() string {
 	return qc.AsyncCollection.Name()
+}
+
+// Collection returns an original mongo.Collection object.
+func (qc *QueueCollection) Collection() *mongo.Collection {
+	return qc.AsyncCollection.Collection()
 }
 
 // Queue returns the queue key.
