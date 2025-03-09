@@ -547,6 +547,31 @@ func TestUpdate(t *testing.T) {
 		testUpdate(t, ctx, db, newEntity, mongox.M{"struct.name": newEntity.Struct.Name})
 		testUpdate(t, ctx, db, newEntity, mongox.M{"time": newEntity.Time})
 		testUpdate(t, ctx, db, newEntity, mongox.M{"inline_field": newEntity.InlineStruct.InlineField})
+
+		updTestEntity2 := struct {
+			Struct *struct {
+				Name *string
+			}
+		}{
+			Struct: &struct {
+				Name *string
+			}{
+				Name: lang.Ptr("new-struct-name-2"),
+			},
+		}
+
+		err = mongox.UpdateOneFromDiff(ctx, coll, mongox.M{"id": "1"}, &updTestEntity2)
+		if err != nil {
+			t.Error(err)
+		}
+
+		newEntity2, err := mongox.FindOne[testEntity](ctx, coll, mongox.M{"id": "1"})
+		if err != nil {
+			t.Error(err)
+		}
+
+		testUpdate(t, ctx, db, newEntity2, mongox.M{"struct.name": newEntity.Struct.Name})
+		testUpdate(t, ctx, db, newEntity2, mongox.M{"Struct.Name": "new-struct-name-2"})
 	})
 }
 

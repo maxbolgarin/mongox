@@ -79,9 +79,19 @@ func processDiffStruct(diff any, parentField string) (map[string]any, error) {
 	}
 
 	upd := make(map[string]any)
-	for n := 0; n < req.NumField(); n++ {
+	for n := range req.NumField() {
 		fieldNameRaw := strings.SplitN(req.Type().Field(n).Tag.Get("bson"), ",", 2)
 		fieldName := fieldNameRaw[0]
+
+		// skip field
+		if fieldName == "-" {
+			continue
+		}
+
+		// There is no bson tag, use the actual field name
+		if fieldName == "" {
+			fieldName = req.Type().Field(n).Name
+		}
 
 		if parentField != "" {
 			fieldName = parentField + "." + fieldName
