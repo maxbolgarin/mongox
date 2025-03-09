@@ -20,6 +20,7 @@ import (
 	"github.com/maxbolgarin/mongox"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -572,6 +573,24 @@ func TestUpdate(t *testing.T) {
 
 		testUpdate(t, ctx, db, newEntity2, mongox.M{"struct.name": newEntity.Struct.Name})
 		testUpdate(t, ctx, db, newEntity2, mongox.M{"Struct.Name": "new-struct-name-2"})
+
+		updTestEntity3 := struct {
+			Name *testUpdateEntity `bson:"name"`
+		}{
+			Name: &testUpdateEntity{name: "new-name-3"},
+		}
+
+		err = mongox.UpdateOneFromDiff(ctx, coll, mongox.M{"id": "1"}, &updTestEntity3)
+		if err != nil {
+			t.Error(err)
+		}
+
+		newEntity3, err := mongox.FindOne[testEntity](ctx, coll, mongox.M{"id": "1"})
+		if err != nil {
+			t.Error(err)
+		}
+
+		testUpdate(t, ctx, db, newEntity3, mongox.M{"name": "new-name-3"})
 	})
 }
 
@@ -1642,4 +1661,25 @@ func newTestEntity(id string) testEntity {
 		Time:   time.Date(2000, 1, rand.Intn(26), rand.Intn(20), rand.Intn(59), rand.Intn(59), 0, time.UTC),
 		Struct: innerStruct{Name: randString(), Number: rand.Intn(26)},
 	}
+}
+
+type testUpdateEntity struct {
+	name string
+}
+
+// func (t testUpdateEntity) MarshalBSONValue() (bson.Type, []byte, error) {
+// 	return bson.MarshalValue(t.name)
+// }
+
+// func (t *testUpdateEntity) UnmarshalBSONValue(typ bson.Type, data []byte) error {
+// 	return bson.UnmarshalValue(typ, data, &t.name)
+// }
+
+func (t testUpdateEntity) MarshalBSONValue() (byte, []byte, error) {
+	typ, data, err := bson.MarshalValue(t.name)
+	return byte(typ), data, err
+}
+
+func (t *testUpdateEntity) UnmarshalBSONValue(typ byte, data []byte) error {
+	return bson.UnmarshalValue(bson.Type(typ), data, &t.name)
 }

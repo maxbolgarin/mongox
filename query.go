@@ -115,8 +115,17 @@ func processDiffStruct(diff any, parentField string) (map[string]any, error) {
 		}
 
 		if kind == reflect.Pointer {
-			// get value of pointer
+			// pointer value, not map or slice
 			field = field.Elem()
+		}
+
+		if val, ok := field.Interface().(bson.ValueMarshaler); ok {
+			upd[fieldName] = val
+			continue
+		}
+		if val, ok := field.Interface().(bson.Marshaler); ok {
+			upd[fieldName] = val
+			continue
 		}
 
 		if field.Kind() == reflect.Struct {
