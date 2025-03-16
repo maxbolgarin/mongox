@@ -723,6 +723,7 @@ func HandleMongoError(err error) error {
 	case strings.Contains(err.Error(), "must be a pointer") ||
 		strings.Contains(err.Error(), "update document must have") ||
 		strings.Contains(err.Error(), "cannot decode") ||
+		strings.Contains(err.Error(), "cannot be nil") ||
 		strings.Contains(err.Error(), "must contain key beginning") ||
 		strings.Contains(err.Error(), "empty update path") ||
 		strings.Contains(err.Error(), "appears multiple times in the index key") ||

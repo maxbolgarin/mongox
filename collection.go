@@ -372,7 +372,7 @@ func (m *Collection) find(ctx context.Context, dest any, filter bson.D, rawOpts 
 	return nil
 }
 
-func (m *Collection) updateOne(ctx context.Context, filter, update bson.D, opts ...options.Lister[options.UpdateOptions]) error {
+func (m *Collection) updateOne(ctx context.Context, filter, update bson.D, opts ...options.Lister[options.UpdateOneOptions]) error {
 	updateResult, err := m.coll.UpdateOne(ctx, filter, update, opts...)
 	if err != nil {
 		return HandleMongoError(err)
