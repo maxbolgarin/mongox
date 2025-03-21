@@ -212,7 +212,7 @@ func (m *Collection) Upsert(ctx context.Context, record any, filter M) (*bson.Ob
 		return nil, HandleMongoError(err)
 	}
 	if upd != nil {
-		if upd.MatchedCount == 0 {
+		if upd.MatchedCount == 0 && upd.UpsertedCount == 0 {
 			return nil, ErrNotFound
 		}
 		if upd.UpsertedID != nil {

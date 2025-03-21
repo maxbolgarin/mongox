@@ -1026,9 +1026,6 @@ func TestError(t *testing.T) {
 		if err = coll.Distinct(ctx, nil, "f", f); err != nil {
 			t.Error(err)
 		}
-		if _, err = coll.Upsert(ctx, entity, f); !errors.Is(err, mongox.ErrNotFound) {
-			t.Error(err)
-		}
 		if err = coll.ReplaceOne(ctx, entity, f); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
 		}
@@ -1049,6 +1046,9 @@ func TestError(t *testing.T) {
 		}
 		if _, err = mongox.DeleteMany(ctx, coll, f); !errors.Is(err, mongox.ErrNotFound) {
 			t.Error(err)
+		}
+		if _, err = coll.Upsert(ctx, entity, f); err != nil {
+			t.Error("expected no error, got", err)
 		}
 	})
 
