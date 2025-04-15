@@ -339,7 +339,7 @@ func (m *Collection) BulkWrite(ctx context.Context, models []mongo.WriteModel, i
 	if err != nil {
 		return mongo.BulkWriteResult{}, HandleMongoError(err)
 	}
-	if res != nil && res.MatchedCount+res.DeletedCount+res.InsertedCount+res.ModifiedCount == 0 {
+	if res != nil && res.MatchedCount+res.DeletedCount+res.InsertedCount+res.ModifiedCount+res.UpsertedCount == 0 {
 		return mongo.BulkWriteResult{}, ErrNotFound
 	}
 	return lang.Deref(res), nil
