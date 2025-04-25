@@ -261,7 +261,7 @@ Contributions are welcome! Please feel free to submit a Pull Request or an Issue
 This project is licensed under the terms of the [MIT License](LICENSE).
 
 [MIT License]: LICENSE.txt
-[version-img]: https://img.shields.io/badge/Go-%3E%3D%201.22-%23007d9c
+[version-img]: https://img.shields.io/badge/Go-%3E%3D%201.24-%23007d9c
 [doc-img]: https://pkg.go.dev/badge/github.com/maxbolgarin/mongox
 [doc]: https://pkg.go.dev/github.com/maxbolgarin/mongox
 [ci-img]: https://github.com/maxbolgarin/mongox/actions/workflows/go.yaml/badge.svg
