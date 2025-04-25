@@ -18,6 +18,7 @@ import (
 // It is safe for concurrent use by multiple goroutines.
 type Client struct {
 	client *mongo.Client
+	config Config
 
 	dbs  map[string]*Database
 	adbs map[string]*AsyncDatabase
@@ -68,6 +69,7 @@ func Connect(ctx context.Context, cfg Config) (*Client, error) {
 
 	out := &Client{
 		client: client,
+		config: cfg,
 		dbs:    make(map[string]*Database),
 		adbs:   make(map[string]*AsyncDatabase),
 	}
@@ -88,6 +90,12 @@ func (m *Client) Client() *mongo.Client {
 // Ping sends a ping command to verify that the client can connect to the deployment.
 func (m *Client) Ping(ctx context.Context) error {
 	return m.client.Ping(ctx, nil)
+}
+
+// IsTLS returns whether the client is using TLS for its connections.
+// This is a helper method to determine if the connection is secure.
+func (m *Client) IsTLS() bool {
+	return IsTLSConnection(m)
 }
 
 // Database returns a handle to a database.

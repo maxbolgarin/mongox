@@ -1,6 +1,8 @@
 package mongox
 
 import (
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -230,6 +232,54 @@ func (cfg *Config) Read(fileName ...string) error {
 		return cleanenv.ReadConfig(fileName[0], cfg)
 	}
 	return cleanenv.ReadEnv(cfg)
+}
+
+// ExportedBuildURL is a wrapper around buildURL for testing purposes
+func ExportedBuildURL(cfg Config) string {
+	return buildURL(cfg)
+}
+
+// IsTLSEnabled checks if TLS is enabled in a MongoDB connection string
+// This is useful for checking if a connection is using TLS
+func IsTLSEnabled(uri string) bool {
+	// Quick check for the presence of tls=true
+	if strings.Contains(uri, "tls=true") || strings.Contains(uri, "ssl=true") {
+		return true
+	}
+
+	// Parse the URI for more accurate checking
+	parsedURL, err := url.Parse(uri)
+	if err != nil {
+		return false
+	}
+
+	// Check query parameters
+	q := parsedURL.Query()
+
+	// Check for TLS (modern) or SSL (legacy) parameters
+	tlsValue := q.Get("tls")
+	sslValue := q.Get("ssl")
+
+	// Check if TLS or SSL is explicitly enabled
+	return tlsValue == "true" || sslValue == "true"
+}
+
+// IsTLSConnection checks if the client connection is using TLS
+// by examining the client's connection string
+func IsTLSConnection(client *Client) bool {
+	// We can't directly access the client's connection options,
+	// but we can reconstruct the connection string and check it
+
+	// The mongo driver doesn't provide direct access to connection string,
+	// so this is an approximation based on the client configuration used to create it
+	cfg := client.config
+
+	if cfg.URI != "" {
+		return IsTLSEnabled(cfg.URI)
+	}
+
+	// If URI wasn't used, check if TLS config was provided
+	return cfg.Connection != nil && cfg.Connection.TLS != nil
 }
 
 var supportedLanguages = map[string]bool{
