@@ -343,7 +343,7 @@ func TestInsertFindDelete(t *testing.T) {
 			t.Errorf("expected 10, got %d", len(result))
 		}
 
-		result, err = mongox.FindAll[testEntity](ctx, db.Collection(findAllCollection), mongox.FindOptions{Sort: mongox.M{"id": 1}})
+		result, err = mongox.FindAll[testEntity](ctx, db.Collection(findAllCollection), mongox.FindOptions{SortMany: []mongox.M{{"id": mongox.Ascending}}})
 		if err != nil {
 			t.Error(err)
 		}
@@ -960,8 +960,8 @@ func TestError(t *testing.T) {
 		err = coll.Find(ctx, &results, nil, mongox.FindOptions{
 			Skip: -100,
 		})
-		if !errors.Is(err, mongox.ErrInvalidArgument) {
-			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
+		if err != nil {
+			t.Error(err)
 		}
 
 		err = coll.Find(ctx, &results, nil, mongox.FindOptions{
@@ -987,8 +987,8 @@ func TestError(t *testing.T) {
 			AllowPartialResults: true,
 			AllowDiskUse:        true,
 		})
-		if err != nil {
-			t.Error(err)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected error %v, got %v", mongox.ErrInvalidArgument, err)
 		}
 
 		_, err = coll.BulkWrite(ctx, []mongo.WriteModel{mongo.NewDeleteManyModel()}, false)

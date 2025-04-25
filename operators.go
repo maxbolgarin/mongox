@@ -1,5 +1,11 @@
 package mongox
 
+// Direction of the sort.
+const (
+	Ascending  = 1
+	Descending = -1
+)
+
 // Comparison Operators
 // https://www.mongodb.com/docs/manual/reference/operator/query-comparison/
 const (

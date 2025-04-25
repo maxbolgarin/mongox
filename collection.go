@@ -19,8 +19,13 @@ type FindOptions struct {
 	// How many documents to skip before returning the first document in the result set.
 	Skip int
 	// The order of the documents returned in the result set. Fields specified in the sort, must have an index.
+	// Sort has priority over SortMany.
 	// Example: mongox.M{"name": 1} - sort by name in ascending order.
 	Sort M
+	// The order of the documents returned in the result set. Fields specified in the sort, must have an index.
+	// Sort has priority over SortMany.
+	// Example: []mongox.M{{"name": mongox.Ascending}, {"age": mongox.Descending}} - sort by name in ascending order and then by age in descending order.
+	SortMany []M
 	// For queries against a sharded collection, allows the command to return partial results,
 	// rather than an error, if one or more queried shards are unavailable.
 	AllowPartialResults bool
@@ -112,14 +117,7 @@ func (m *Collection) CreateTextIndex(ctx context.Context, languageCode string, f
 // It returns ErrNotFound if NO document is found.
 // Limit and AllowDiskUse options are no-op.
 func (m *Collection) FindOne(ctx context.Context, dest any, filter M, rawOpts ...FindOptions) error {
-	findOneOpts := options.FindOne()
-	if len(rawOpts) > 0 {
-		opts := rawOpts[0]
-		findOneOpts.SetSkip(int64(opts.Skip))
-		findOneOpts.SetSort(opts.Sort)
-		findOneOpts.SetAllowPartialResults(opts.AllowPartialResults)
-	}
-	res := m.coll.FindOne(ctx, filter.Prepare())
+	res := m.coll.FindOne(ctx, filter.Prepare(), setFindOneOptions(rawOpts...))
 	if err := res.Err(); err != nil {
 		return HandleMongoError(err)
 	}
@@ -346,16 +344,7 @@ func (m *Collection) BulkWrite(ctx context.Context, models []mongo.WriteModel, i
 }
 
 func (m *Collection) find(ctx context.Context, dest any, filter bson.D, rawOpts ...FindOptions) error {
-	findOpts := options.Find()
-	if len(rawOpts) > 0 {
-		opts := rawOpts[0]
-		lang.IfV(opts.Limit, func() { findOpts.SetLimit(int64(opts.Limit)) })
-		lang.IfV(opts.Skip, func() { findOpts.SetSkip(int64(opts.Skip)) })
-		lang.IfF(len(opts.Sort) > 0, func() { findOpts.SetSort(opts.Sort) })
-		lang.IfV(opts.AllowPartialResults, func() { findOpts.SetAllowPartialResults(opts.AllowPartialResults) })
-		lang.IfV(opts.AllowDiskUse, func() { findOpts.SetAllowDiskUse(opts.AllowDiskUse) })
-	}
-	cur, err := m.coll.Find(ctx, filter, findOpts)
+	cur, err := m.coll.Find(ctx, filter, setFindOptions(rawOpts...))
 	if err != nil {
 		return HandleMongoError(err)
 	}
@@ -381,4 +370,47 @@ func (m *Collection) updateOne(ctx context.Context, filter, update bson.D, opts 
 		return ErrNotFound
 	}
 	return nil
+}
+
+func setFindOneOptions(rawOpts ...FindOptions) *options.FindOneOptionsBuilder {
+	findOneOpts := options.FindOne()
+	if len(rawOpts) > 0 {
+		opts := rawOpts[0]
+		lang.IfF(opts.Skip > 0, func() { findOneOpts.SetSkip(int64(opts.Skip)) })
+		lang.IfF(opts.AllowPartialResults, func() { findOneOpts.SetAllowPartialResults(opts.AllowPartialResults) })
+
+		lang.IfF(len(opts.SortMany) > 0, func() {
+			sortMany := make(bson.D, 0, len(opts.SortMany))
+			for _, sort := range opts.SortMany {
+				for k, v := range sort {
+					sortMany = append(sortMany, bson.E{Key: k, Value: v})
+				}
+			}
+			findOneOpts.SetSort(sortMany)
+		})
+		lang.IfF(len(opts.Sort) > 0, func() { findOneOpts.SetSort(opts.Sort) }) // Sort has priority over SortMany
+	}
+	return findOneOpts
+}
+
+func setFindOptions(rawOpts ...FindOptions) *options.FindOptionsBuilder {
+	findOpts := options.Find()
+	if len(rawOpts) > 0 {
+		opts := rawOpts[0]
+		lang.IfF(opts.Limit > 0, func() { findOpts.SetLimit(int64(opts.Limit)) })
+		lang.IfF(opts.Skip > 0, func() { findOpts.SetSkip(int64(opts.Skip)) })
+		lang.IfF(opts.AllowPartialResults, func() { findOpts.SetAllowPartialResults(opts.AllowPartialResults) })
+		lang.IfF(opts.AllowDiskUse, func() { findOpts.SetAllowDiskUse(opts.AllowDiskUse) })
+		lang.IfF(len(opts.SortMany) > 0, func() {
+			sortMany := make(bson.D, 0, len(opts.SortMany))
+			for _, sort := range opts.SortMany {
+				for k, v := range sort {
+					sortMany = append(sortMany, bson.E{Key: k, Value: v})
+				}
+			}
+			findOpts.SetSort(sortMany)
+		})
+		lang.IfF(len(opts.Sort) > 0, func() { findOpts.SetSort(opts.Sort) }) // Sort has priority over SortMany
+	}
+	return findOpts
 }
