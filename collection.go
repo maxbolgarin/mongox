@@ -203,36 +203,75 @@ func (m *Collection) Distinct(ctx context.Context, dest any, field string, filte
 	return nil
 }
 
+// InsertOne inserts a document into the collection.
+// It returns ID of the inserted document.
+// If isStrictID is true, it will return an error if the inserted ID is not an ObjectID.
+// It returns ErrInternal if no inserted ID is returned.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
+func (m *Collection) InsertOne(ctx context.Context, record any, isStrictID ...bool) (id bson.ObjectID, err error) {
+	ids, err := m.InsertMany(ctx, []any{record}, isStrictID...)
+	if err != nil {
+		return bson.ObjectID{}, err
+	}
+	if len(ids) == 0 {
+		return bson.ObjectID{}, fmt.Errorf("%w: no inserted ID", ErrInternal)
+	}
+	return ids[0], nil
+}
+
 // Insert inserts a document or many documents into the collection.
-// It returns IDs of the inserted documents.
-// Internally InsertMany uses bulk write.
+// It returns IDs of the inserted documents. Internally InsertMany uses bulk write.
+// It NOT returns an error if inserted IDs are not ObjectID, so it is NOT strict.
+// If inserted ID is not an ObjectID, it will be returned as empty bson.ObjectID.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
 func (m *Collection) Insert(ctx context.Context, records ...any) (ids []bson.ObjectID, err error) {
 	return m.InsertMany(ctx, records)
+}
+
+// InsertStrict inserts a document or many documents into the collection.
+// It returns IDs of the inserted documents. Internally InsertMany uses bulk write.
+// It returns an error if inserted IDs are not ObjectID.
+func (m *Collection) InsertStrict(ctx context.Context, records ...any) (ids []bson.ObjectID, err error) {
+	return m.InsertMany(ctx, records, true)
 }
 
 // InsertMany inserts many documents into the collection.
 // It returns IDs of the inserted documents.
 // Internally InsertMany uses bulk write.
-func (m *Collection) InsertMany(ctx context.Context, records []any) (ids []bson.ObjectID, err error) {
+// If isStrictID is true, it will return an error if the inserted ID is not an ObjectID.
+// If isStrictID is false and if inserted ID is not an ObjectID, it will be returned as empty bson.ObjectID.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
+func (m *Collection) InsertMany(ctx context.Context, records []any, isStrictID ...bool) (ids []bson.ObjectID, err error) {
 	if len(records) == 0 {
 		return nil, nil
 	}
 
 	ids = make([]bson.ObjectID, len(records))
+	var ok bool
 	if len(records) == 1 {
 		res, err := m.coll.InsertOne(ctx, records[0])
 		if err != nil {
 			return nil, HandleMongoError(err)
 		}
-		ids[0], _ = res.InsertedID.(bson.ObjectID)
+		ids[0], ok = res.InsertedID.(bson.ObjectID)
+		if !ok && len(isStrictID) > 0 && isStrictID[0] {
+			return nil, fmt.Errorf("%w: expected ObjectID, got %T, %v", ErrInvalidArgument, res.InsertedID, res.InsertedID)
+		}
 
 	} else {
+		var errs []string
 		res, err := m.coll.InsertMany(ctx, records)
 		if err != nil {
 			return nil, HandleMongoError(err)
 		}
 		for i, id := range res.InsertedIDs {
-			ids[i], _ = id.(bson.ObjectID)
+			ids[i], ok = id.(bson.ObjectID)
+			if !ok && len(isStrictID) > 0 && isStrictID[0] {
+				errs = append(errs, fmt.Sprintf("expected ObjectID, got %T, %v", id, id))
+			}
+		}
+		if len(errs) > 0 {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidArgument, strings.Join(errs, ", "))
 		}
 	}
 	return ids, nil

@@ -104,13 +104,42 @@ func (ac *AsyncCollection) Collection() *mongo.Collection {
 	return ac.coll.Collection()
 }
 
+// InsertOne inserts a document into the collection asynchronously without waiting.
+// It start retrying in case of error for DefaultAsyncRetries times.
+// It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
+// Tasks in different queues will be executed in parallel.
+// If isStrictID is true, it will return an error if the inserted ID is not an ObjectID.
+// It returns ErrInternal if no inserted ID is returned.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
+func (ac *AsyncCollection) InsertOne(queueKey, taskName string, record any, isStrictID ...bool) {
+	ac.push(queueKey, taskName, "insert_one", func(ctx context.Context) error {
+		_, err := ac.coll.InsertOne(ctx, record, isStrictID...)
+		return err
+	})
+}
+
 // Insert inserts a document or many documents into the collection asynchronously without waiting.
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
 // Tasks in different queues will be executed in parallel.
+// It NOT returns an error if inserted IDs are not ObjectID, so it is NOT strict.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
 func (ac *AsyncCollection) Insert(queueKey, taskName string, records ...any) {
 	ac.push(queueKey, taskName, "insert", func(ctx context.Context) error {
 		_, err := ac.coll.Insert(ctx, records...)
+		return err
+	})
+}
+
+// InsertStrict inserts a document or many documents into the collection.
+// It start retrying in case of error for DefaultAsyncRetries times.
+// It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
+// Tasks in different queues will be executed in parallel.
+// It returns IDs of the inserted documents. Internally InsertMany uses bulk write.
+// It returns an error if inserted IDs are not ObjectID.
+func (ac *AsyncCollection) InsertStrict(queueKey, taskName string, records ...any) {
+	ac.push(queueKey, taskName, "insert_strict", func(ctx context.Context) error {
+		_, err := ac.coll.InsertStrict(ctx, records...)
 		return err
 	})
 }
@@ -119,9 +148,12 @@ func (ac *AsyncCollection) Insert(queueKey, taskName string, records ...any) {
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
 // Tasks in different queues will be executed in parallel.
-func (ac *AsyncCollection) InsertMany(queueKey, taskName string, records []any) {
+// If isStrictID is true, it will return an error if the inserted ID is not an ObjectID.
+// If isStrictID is false and if inserted ID is not an ObjectID, it will be returned as empty bson.ObjectID.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
+func (ac *AsyncCollection) InsertMany(queueKey, taskName string, records []any, isStrictID ...bool) {
 	ac.push(queueKey, taskName, "insert_many", func(ctx context.Context) error {
-		_, err := ac.coll.InsertMany(ctx, records)
+		_, err := ac.coll.InsertMany(ctx, records, isStrictID...)
 		return err
 	})
 }
@@ -320,18 +352,42 @@ func (qc *QueueCollection) Queue() string {
 	return qc.name
 }
 
+// InsertOne inserts a document into the collection asynchronously without waiting.
+// It start retrying in case of error for DefaultAsyncRetries times.
+// It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
+// If isStrictID is true, it will return an error if the inserted ID is not an ObjectID.
+// It returns ErrInternal if no inserted ID is returned.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
+func (qc *QueueCollection) InsertOne(record any, isStrictID ...bool) {
+	qc.AsyncCollection.InsertOne(qc.name, "", record, isStrictID...)
+}
+
 // Insert inserts a document or many documents into the collection asynchronously without waiting.
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
+// It NOT returns an error if inserted IDs are not ObjectID, so it is NOT strict.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
 func (qc *QueueCollection) Insert(records ...any) {
 	qc.AsyncCollection.Insert(qc.name, "", records...)
+}
+
+// InsertStrict inserts a document or many documents into the collection.
+// It start retrying in case of error for DefaultAsyncRetries times.
+// It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
+// It returns IDs of the inserted documents. Internally InsertMany uses bulk write.
+// It returns an error if inserted IDs are not ObjectID.
+func (qc *QueueCollection) InsertStrict(records ...any) {
+	qc.AsyncCollection.InsertStrict(qc.name, "", records...)
 }
 
 // InsertMany inserts many documents into the collection asynchronously without waiting.
 // It start retrying in case of error for DefaultAsyncRetries times.
 // It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
-func (qc *QueueCollection) InsertMany(records []any) {
-	qc.AsyncCollection.InsertMany(qc.name, "", records)
+// If isStrictID is true, it will return an error if the inserted ID is not an ObjectID.
+// If isStrictID is false and if inserted ID is not an ObjectID, it will be returned as empty bson.ObjectID.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
+func (qc *QueueCollection) InsertMany(records []any, isStrictID ...bool) {
+	qc.AsyncCollection.InsertMany(qc.name, "", records, isStrictID...)
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist asynchronously without waiting.

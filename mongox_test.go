@@ -2383,3 +2383,569 @@ func TestFindOneAndMethods(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestInsertMethods(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	db := client.Database(dbName)
+	coll := db.Collection("insert_methods_test")
+
+	t.Run("InsertOne_Basic", func(t *testing.T) {
+		// Test basic InsertOne functionality
+		entity := newTestEntity("insertone1")
+
+		id, err := coll.InsertOne(ctx, entity)
+		if err != nil {
+			t.Error(err)
+		}
+		if id.IsZero() {
+			t.Error("expected non-zero ObjectID")
+		}
+
+		// Verify the document was inserted
+		var result testEntity
+		err = coll.FindOne(ctx, &result, mongox.M{"id": "insertone1"})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "insertone1" {
+			t.Errorf("expected ID 'insertone1', got '%s'", result.ID)
+		}
+
+		// Test generic InsertOne
+		entity2 := newTestEntity("insertone2")
+		id2, err := mongox.InsertOne(ctx, coll, entity2)
+		if err != nil {
+			t.Error(err)
+		}
+		if id2.IsZero() {
+			t.Error("expected non-zero ObjectID from generic InsertOne")
+		}
+
+		// Verify the document was inserted
+		err = coll.FindOne(ctx, &result, mongox.M{"id": "insertone2"})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "insertone2" {
+			t.Errorf("expected ID 'insertone2', got '%s'", result.ID)
+		}
+
+		// Cleanup
+		_, _ = coll.DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.In: []string{"insertone1", "insertone2"}}})
+	})
+
+	t.Run("InsertOne_StrictID", func(t *testing.T) {
+		// Test InsertOne with strict ID validation enabled
+		entity := newTestEntity("strictone1")
+
+		id, err := coll.InsertOne(ctx, entity, true)
+		if err != nil {
+			t.Error(err)
+		}
+		if id.IsZero() {
+			t.Error("expected non-zero ObjectID with strict validation")
+		}
+
+		// Test generic InsertOne with strict validation
+		entity2 := newTestEntity("strictone2")
+		id2, err := mongox.InsertOne(ctx, coll, entity2, true)
+		if err != nil {
+			t.Error(err)
+		}
+		if id2.IsZero() {
+			t.Error("expected non-zero ObjectID from generic InsertOne with strict validation")
+		}
+
+		// Cleanup
+		_, _ = coll.DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.In: []string{"strictone1", "strictone2"}}})
+	})
+
+	t.Run("InsertOne_WithCustomID", func(t *testing.T) {
+		// Test InsertOne with a document that has a custom string ID
+		// This should succeed in non-strict mode but return empty ObjectID
+		entityWithCustomID := struct {
+			ID   string `bson:"_id"`
+			Name string `bson:"name"`
+		}{
+			ID:   "custom-string-id",
+			Name: "test-entity",
+		}
+
+		id, err := coll.InsertOne(ctx, entityWithCustomID)
+		if err != nil {
+			t.Error(err)
+		}
+		if !id.IsZero() {
+			t.Error("expected zero ObjectID when using custom string ID")
+		}
+
+		// Test with strict validation - should fail
+		entityWithCustomID2 := struct {
+			ID   string `bson:"_id"`
+			Name string `bson:"name"`
+		}{
+			ID:   "custom-string-id-2",
+			Name: "test-entity-2",
+		}
+
+		_, err = coll.InsertOne(ctx, entityWithCustomID2, true)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument with strict validation and custom string ID, got %v", err)
+		}
+
+		// Cleanup
+		_ = coll.DeleteOne(ctx, mongox.M{"_id": "custom-string-id"})
+	})
+
+	t.Run("InsertOne_ErrorHandling", func(t *testing.T) {
+		// Test InsertOne with nil record
+		_, err := coll.InsertOne(ctx, nil)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument for nil record, got %v", err)
+		}
+
+		// Test InsertOne with invalid record type
+		_, err = coll.InsertOne(ctx, func() {})
+		if err == nil {
+			t.Error("expected error for invalid record type")
+		}
+
+		// Test duplicate key error with custom _id field
+		entityWithFixedID := struct {
+			ID   string `bson:"_id"`
+			Name string `bson:"name"`
+		}{
+			ID:   "fixed-duplicate-test",
+			Name: "test-entity",
+		}
+
+		_, err = coll.InsertOne(ctx, entityWithFixedID)
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Try to insert the same entity again (should fail due to duplicate _id)
+		_, err = coll.InsertOne(ctx, entityWithFixedID)
+		if !errors.Is(err, mongox.ErrDuplicate) {
+			t.Errorf("expected ErrDuplicate for duplicate _id, got %v", err)
+		}
+
+		// Cleanup
+		_ = coll.DeleteOne(ctx, mongox.M{"_id": "fixed-duplicate-test"})
+	})
+
+	t.Run("Insert_Basic", func(t *testing.T) {
+		// Test basic Insert functionality (non-strict by default)
+		entity1 := newTestEntity("insert1")
+		entity2 := newTestEntity("insert2")
+		entity3 := newTestEntity("insert3")
+
+		ids, err := coll.Insert(ctx, entity1, entity2, entity3)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(ids) != 3 {
+			t.Errorf("expected 3 IDs, got %d", len(ids))
+		}
+		for i, id := range ids {
+			if id.IsZero() {
+				t.Errorf("expected non-zero ObjectID at index %d", i)
+			}
+		}
+
+		// Verify all documents were inserted
+		var results []testEntity
+		err = coll.Find(ctx, &results, mongox.M{"id": mongox.M{mongox.In: []string{"insert1", "insert2", "insert3"}}})
+		if err != nil {
+			t.Error(err)
+		}
+		if len(results) != 3 {
+			t.Errorf("expected 3 documents found, got %d", len(results))
+		}
+
+		// Test generic Insert
+		entity4 := newTestEntity("insert4")
+		entity5 := newTestEntity("insert5")
+
+		ids2, err := mongox.Insert(ctx, coll, entity4, entity5)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(ids2) != 2 {
+			t.Errorf("expected 2 IDs from generic Insert, got %d", len(ids2))
+		}
+
+		// Cleanup
+		_, _ = coll.DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.In: []string{"insert1", "insert2", "insert3", "insert4", "insert5"}}})
+	})
+
+	t.Run("Insert_WithCustomIDs", func(t *testing.T) {
+		// Test Insert with custom string IDs (non-strict mode)
+		entitiesWithCustomIDs := []any{
+			struct {
+				ID   string `bson:"_id"`
+				Name string `bson:"name"`
+			}{
+				ID:   "custom-1",
+				Name: "entity-1",
+			},
+			struct {
+				ID   string `bson:"_id"`
+				Name string `bson:"name"`
+			}{
+				ID:   "custom-2",
+				Name: "entity-2",
+			},
+		}
+
+		ids, err := coll.Insert(ctx, entitiesWithCustomIDs...)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(ids) != 2 {
+			t.Errorf("expected 2 IDs, got %d", len(ids))
+		}
+		// With custom string IDs, the returned ObjectIDs should be zero
+		for i, id := range ids {
+			if !id.IsZero() {
+				t.Errorf("expected zero ObjectID at index %d when using custom string ID", i)
+			}
+		}
+
+		// Verify documents were inserted
+		count, err := coll.Count(ctx, mongox.M{"_id": mongox.M{mongox.In: []string{"custom-1", "custom-2"}}})
+		if err != nil {
+			t.Error(err)
+		}
+		if count != 2 {
+			t.Errorf("expected 2 documents with custom IDs, got %d", count)
+		}
+
+		// Cleanup
+		_, _ = coll.DeleteMany(ctx, mongox.M{"_id": mongox.M{mongox.In: []string{"custom-1", "custom-2"}}})
+	})
+
+	t.Run("InsertStrict_Basic", func(t *testing.T) {
+		// Test InsertStrict functionality
+		entity1 := newTestEntity("strict1")
+		entity2 := newTestEntity("strict2")
+
+		ids, err := coll.InsertStrict(ctx, entity1, entity2)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(ids) != 2 {
+			t.Errorf("expected 2 IDs from InsertStrict, got %d", len(ids))
+		}
+		for i, id := range ids {
+			if id.IsZero() {
+				t.Errorf("expected non-zero ObjectID at index %d from InsertStrict", i)
+			}
+		}
+
+		// Test generic InsertStrict
+		entity3 := newTestEntity("strict3")
+		ids2, err := mongox.InsertStrict(ctx, coll, entity3)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(ids2) != 1 {
+			t.Errorf("expected 1 ID from generic InsertStrict, got %d", len(ids2))
+		}
+		if ids2[0].IsZero() {
+			t.Error("expected non-zero ObjectID from generic InsertStrict")
+		}
+
+		// Verify all documents were inserted
+		var results []testEntity
+		err = coll.Find(ctx, &results, mongox.M{"id": mongox.M{mongox.In: []string{"strict1", "strict2", "strict3"}}})
+		if err != nil {
+			t.Error(err)
+		}
+		if len(results) != 3 {
+			t.Errorf("expected 3 documents found, got %d", len(results))
+		}
+
+		// Cleanup
+		_, _ = coll.DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.In: []string{"strict1", "strict2", "strict3"}}})
+	})
+
+	t.Run("InsertStrict_WithCustomIDs", func(t *testing.T) {
+		// First cleanup any potentially existing documents with these IDs
+		_, _ = coll.DeleteMany(ctx, mongox.M{"_id": mongox.M{mongox.In: []string{"strict-custom-unique-1", "strict-custom-unique-2"}}})
+
+		// Test InsertStrict with custom string IDs - should fail
+		entitiesWithCustomIDs := []any{
+			struct {
+				ID   string `bson:"_id"`
+				Name string `bson:"name"`
+			}{
+				ID:   "strict-custom-unique-1",
+				Name: "entity-1",
+			},
+			struct {
+				ID   string `bson:"_id"`
+				Name string `bson:"name"`
+			}{
+				ID:   "strict-custom-unique-2",
+				Name: "entity-2",
+			},
+		}
+
+		_, err := coll.InsertStrict(ctx, entitiesWithCustomIDs...)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument with InsertStrict and custom string IDs, got %v", err)
+		}
+
+		// Test generic InsertStrict with custom ID (use a different ID)
+		singleEntityWithCustomID := struct {
+			ID   string `bson:"_id"`
+			Name string `bson:"name"`
+		}{
+			ID:   "strict-generic-unique-1",
+			Name: "entity-generic",
+		}
+
+		_, err = mongox.InsertStrict(ctx, coll, singleEntityWithCustomID)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument with generic InsertStrict and custom string ID, got %v", err)
+		}
+	})
+
+	t.Run("Insert_ErrorHandling", func(t *testing.T) {
+		// Test Insert with nil records
+		_, err := coll.Insert(ctx)
+		if err != nil {
+			t.Error("Insert with no records should not error")
+		}
+
+		_, err = coll.Insert(ctx, nil)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument for nil record in Insert, got %v", err)
+		}
+
+		// Test Insert with mixed valid and invalid records
+		entity := newTestEntity("mixed")
+		_, err = coll.Insert(ctx, entity, nil)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument for mixed valid/nil records, got %v", err)
+		}
+
+		// Test InsertStrict with nil records
+		_, err = coll.InsertStrict(ctx, nil)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument for nil record in InsertStrict, got %v", err)
+		}
+	})
+
+	t.Run("StrictID_Comparison", func(t *testing.T) {
+		// Compare behavior between strict and non-strict modes
+
+		// Create an entity with custom ID
+		entityWithCustomID := struct {
+			ID   string `bson:"_id"`
+			Name string `bson:"name"`
+		}{
+			ID:   "comparison-test",
+			Name: "test-entity",
+		}
+
+		// Non-strict mode should succeed and return zero ObjectID
+		ids, err := coll.Insert(ctx, entityWithCustomID)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(ids) != 1 || !ids[0].IsZero() {
+			t.Error("non-strict Insert should return zero ObjectID for custom string ID")
+		}
+
+		// Cleanup before next test
+		_ = coll.DeleteOne(ctx, mongox.M{"_id": "comparison-test"})
+
+		// Strict mode should fail
+		_, err = coll.InsertStrict(ctx, entityWithCustomID)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("strict Insert should fail with custom string ID, got error: %v", err)
+		}
+
+		// Test with regular testEntity (should work in both modes)
+		entity := newTestEntity("comparison-regular")
+
+		// Non-strict mode
+		ids, err = coll.Insert(ctx, entity)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(ids) != 1 || ids[0].IsZero() {
+			t.Error("non-strict Insert should return non-zero ObjectID for regular entity")
+		}
+
+		// Cleanup
+		_ = coll.DeleteOne(ctx, mongox.M{"id": "comparison-regular"})
+
+		// Strict mode
+		ids, err = coll.InsertStrict(ctx, entity)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(ids) != 1 || ids[0].IsZero() {
+			t.Error("strict Insert should return non-zero ObjectID for regular entity")
+		}
+
+		// Cleanup
+		_ = coll.DeleteOne(ctx, mongox.M{"id": "comparison-regular"})
+	})
+
+	t.Run("InsertMany_StrictID", func(t *testing.T) {
+		// Test InsertMany with strict ID parameter
+		entities := []any{
+			newTestEntity("many1"),
+			newTestEntity("many2"),
+			newTestEntity("many3"),
+		}
+
+		// Test InsertMany with strict=false
+		ids, err := coll.InsertMany(ctx, entities, false)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(ids) != 3 {
+			t.Errorf("expected 3 IDs from InsertMany, got %d", len(ids))
+		}
+		for i, id := range ids {
+			if id.IsZero() {
+				t.Errorf("expected non-zero ObjectID at index %d from InsertMany", i)
+			}
+		}
+
+		// Cleanup
+		_, _ = coll.DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.In: []string{"many1", "many2", "many3"}}})
+
+		// Test InsertMany with strict=true
+		ids, err = coll.InsertMany(ctx, entities, true)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(ids) != 3 {
+			t.Errorf("expected 3 IDs from strict InsertMany, got %d", len(ids))
+		}
+		for i, id := range ids {
+			if id.IsZero() {
+				t.Errorf("expected non-zero ObjectID at index %d from strict InsertMany", i)
+			}
+		}
+
+		// Cleanup
+		_, _ = coll.DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.In: []string{"many1", "many2", "many3"}}})
+
+		// Test InsertMany with custom IDs and strict=true (should fail)
+		entitiesWithCustomIDs := []any{
+			struct {
+				ID   string `bson:"_id"`
+				Name string `bson:"name"`
+			}{
+				ID:   "many-custom-unique-1",
+				Name: "entity-1",
+			},
+			struct {
+				ID   string `bson:"_id"`
+				Name string `bson:"name"`
+			}{
+				ID:   "many-custom-unique-2",
+				Name: "entity-2",
+			},
+		}
+
+		_, err = coll.InsertMany(ctx, entitiesWithCustomIDs, true)
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument with strict InsertMany and custom string IDs, got %v", err)
+		}
+
+		// Create new entities with different IDs for the non-strict test
+		entitiesWithCustomIDs2 := []any{
+			struct {
+				ID   string `bson:"_id"`
+				Name string `bson:"name"`
+			}{
+				ID:   "many-custom-nonstrict-1",
+				Name: "entity-nonstrict-1",
+			},
+			struct {
+				ID   string `bson:"_id"`
+				Name string `bson:"name"`
+			}{
+				ID:   "many-custom-nonstrict-2",
+				Name: "entity-nonstrict-2",
+			},
+		}
+
+		// Test InsertMany with custom IDs and strict=false (should succeed)
+		ids, err = coll.InsertMany(ctx, entitiesWithCustomIDs2, false)
+		if err != nil {
+			t.Errorf("non-strict InsertMany with custom IDs failed: %v", err)
+		}
+		if len(ids) != 2 {
+			t.Errorf("expected 2 IDs from non-strict InsertMany with custom IDs, got %d", len(ids))
+		}
+		for i, id := range ids {
+			if !id.IsZero() {
+				t.Errorf("expected zero ObjectID at index %d for custom string ID", i)
+			}
+		}
+
+		// Cleanup
+		_, _ = coll.DeleteMany(ctx, mongox.M{"_id": mongox.M{mongox.In: []string{"many-custom-nonstrict-1", "many-custom-nonstrict-2"}}})
+	})
+
+	t.Run("BulkWrite_WithStrictID", func(t *testing.T) {
+		// Test bulk operations and verify ID handling
+		bulker := mongox.NewBulkBuilder()
+
+		// Add various insert operations
+		entity1 := newTestEntity("bulk1")
+		entity2 := newTestEntity("bulk2")
+		entityWithCustomID := struct {
+			ID   string `bson:"_id"`
+			Name string `bson:"name"`
+		}{
+			ID:   "bulk-custom",
+			Name: "bulk-entity",
+		}
+
+		bulker.Insert(entity1, entity2, entityWithCustomID)
+
+		result, err := coll.BulkWrite(ctx, bulker.Models(), false)
+		if err != nil {
+			t.Error(err)
+		}
+		if result.InsertedCount != 3 {
+			t.Errorf("expected 3 inserted documents, got %d", result.InsertedCount)
+		}
+
+		// Verify documents were inserted
+		count, err := coll.Count(ctx, mongox.M{"$or": []mongox.M{
+			{"id": mongox.M{mongox.In: []string{"bulk1", "bulk2"}}},
+			{"_id": "bulk-custom"},
+		}})
+		if err != nil {
+			t.Error(err)
+		}
+		if count != 3 {
+			t.Errorf("expected 3 documents in bulk write, got %d", count)
+		}
+
+		// Cleanup
+		_, _ = coll.DeleteMany(ctx, mongox.M{"$or": []mongox.M{
+			{"id": mongox.M{mongox.In: []string{"bulk1", "bulk2"}}},
+			{"_id": "bulk-custom"},
+		}})
+	})
+
+	// Final cleanup
+	_, err := coll.DeleteMany(ctx, nil)
+	if err != nil && !errors.Is(err, mongox.ErrNotFound) {
+		t.Error(err)
+	}
+}

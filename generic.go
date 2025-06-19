@@ -102,16 +102,35 @@ func Distinct[T any](ctx context.Context, coll *Collection, field string, filter
 	return result, nil
 }
 
+// InsertOne inserts a document into the collection.
+// It returns ID of the inserted document.
+// If isStrictID is true, it will return an error if the inserted ID is not an ObjectID.
+// It returns ErrInternal if no inserted ID is returned.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
+func InsertOne(ctx context.Context, coll *Collection, record any, isStrictID ...bool) (id bson.ObjectID, err error) {
+	return coll.InsertOne(ctx, record, isStrictID...)
+}
+
 // Insert inserts a document(s) into the collection
-// It returns IDs of the inserted documents.
-// Internally InsertMany uses bulk write.
+// It returns IDs of the inserted documents. Internally InsertMany uses bulk write.
+// It NOT returns an error if inserted IDs are not ObjectID, so it is NOT strict.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
 func Insert(ctx context.Context, coll *Collection, record ...any) ([]bson.ObjectID, error) {
 	return coll.Insert(ctx, record...)
 }
 
+// InsertStrict inserts a document or many documents into the collection.
+// It returns IDs of the inserted documents. Internally InsertMany uses bulk write.
+// It returns an error if inserted IDs are not ObjectID.
+func InsertStrict(ctx context.Context, coll *Collection, records ...any) (ids []bson.ObjectID, err error) {
+	return coll.InsertStrict(ctx, records...)
+}
+
 // InsertMany inserts many documents into the collection.
-// It returns IDs of the inserted documents.
-// Internally InsertMany uses bulk write.
+// It returns IDs of the inserted documents. Internally InsertMany uses bulk write.
+// If isStrictID is true, it will return an error if the inserted ID is not an ObjectID.
+// If isStrictID is false and if inserted ID is not an ObjectID, it will be returned as empty bson.ObjectID.
+// If you provide your own ID, it is assumed you already know it, so it will not be returned.
 func InsertMany(ctx context.Context, coll *Collection, records []any) ([]bson.ObjectID, error) {
 	return coll.InsertMany(ctx, records)
 }
