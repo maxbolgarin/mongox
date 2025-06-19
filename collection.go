@@ -139,6 +139,45 @@ func (m *Collection) FindAll(ctx context.Context, dest any, opts ...FindOptions)
 	return m.find(ctx, dest, bson.D{}, opts...)
 }
 
+// FindOneAndDelete finds a document in the collection using filter and deletes it.
+// It returns ErrNotFound if no document is found.
+func (m *Collection) FindOneAndDelete(ctx context.Context, dest any, filter M) error {
+	res := m.coll.FindOneAndDelete(ctx, filter.Prepare())
+	if err := res.Err(); err != nil {
+		return HandleMongoError(err)
+	}
+	if err := res.Decode(dest); err != nil {
+		return HandleMongoError(err)
+	}
+	return nil
+}
+
+// FindOneAndReplace finds a document in the collection using filter and replaces it.
+// It returns ErrNotFound if no document is found.
+func (m *Collection) FindOneAndReplace(ctx context.Context, dest any, filter M, replacement any) error {
+	res := m.coll.FindOneAndReplace(ctx, filter.Prepare(), replacement)
+	if err := res.Err(); err != nil {
+		return HandleMongoError(err)
+	}
+	if err := res.Decode(dest); err != nil {
+		return HandleMongoError(err)
+	}
+	return nil
+}
+
+// FindOneAndUpdate finds a document in the collection using filter and updates it.
+// It returns ErrNotFound if no document is found.
+func (m *Collection) FindOneAndUpdate(ctx context.Context, dest any, filter M, update any) error {
+	res := m.coll.FindOneAndUpdate(ctx, filter.Prepare(), update)
+	if err := res.Err(); err != nil {
+		return HandleMongoError(err)
+	}
+	if err := res.Decode(dest); err != nil {
+		return HandleMongoError(err)
+	}
+	return nil
+}
+
 // Count counts the number of documents in the collection using filter.
 // Nil filter means count all documents.
 func (m *Collection) Count(ctx context.Context, filter M) (int64, error) {

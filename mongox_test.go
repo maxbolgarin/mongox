@@ -1683,3 +1683,703 @@ func (t testUpdateEntity) MarshalBSONValue() (byte, []byte, error) {
 func (t *testUpdateEntity) UnmarshalBSONValue(typ byte, data []byte) error {
 	return bson.UnmarshalValue(bson.Type(typ), data, &t.name)
 }
+
+func TestFindOneMethods(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	db := client.Database(dbName)
+	coll := db.Collection("find_one_methods_test")
+
+	// Setup test data
+	entities := make([]testEntity, 5)
+	for i := 0; i < 5; i++ {
+		entities[i] = newTestEntity(fmt.Sprintf("%d", i+1))
+	}
+
+	// Insert test data
+	_, err := coll.Insert(ctx,
+		entities[0], entities[1], entities[2], entities[3], entities[4])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("FindOne_BasicFilters", func(t *testing.T) {
+		// Test FindOne with basic filters
+		var result testEntity
+		err := coll.FindOne(ctx, &result, mongox.M{"id": "1"})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "1" {
+			t.Errorf("expected ID '1', got '%s'", result.ID)
+		}
+
+		// Test FindOne with complex filter
+		err = coll.FindOne(ctx, &result, mongox.M{"id": mongox.M{mongox.In: []string{"2", "3"}}})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "2" && result.ID != "3" {
+			t.Errorf("expected ID '2' or '3', got '%s'", result.ID)
+		}
+
+		// Test FindOne with no filter (should return any document)
+		err = coll.FindOne(ctx, &result, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID == "" {
+			t.Error("expected non-empty ID")
+		}
+	})
+
+	t.Run("FindOne_WithOptions", func(t *testing.T) {
+		var result testEntity
+
+		// Test FindOne with Skip option
+		err := coll.FindOne(ctx, &result, nil, mongox.FindOptions{
+			Skip: 2,
+			Sort: mongox.M{"id": 1},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "3" {
+			t.Errorf("expected ID '3' with skip=2, got '%s'", result.ID)
+		}
+
+		// Test FindOne with Sort option (ascending)
+		err = coll.FindOne(ctx, &result, nil, mongox.FindOptions{
+			Sort: mongox.M{"id": mongox.Ascending},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "1" {
+			t.Errorf("expected ID '1' with ascending sort, got '%s'", result.ID)
+		}
+
+		// Test FindOne with Sort option (descending)
+		err = coll.FindOne(ctx, &result, nil, mongox.FindOptions{
+			Sort: mongox.M{"id": mongox.Descending},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "5" {
+			t.Errorf("expected ID '5' with descending sort, got '%s'", result.ID)
+		}
+
+		// Test FindOne with SortMany option
+		err = coll.FindOne(ctx, &result, nil, mongox.FindOptions{
+			SortMany: []mongox.M{
+				{"id": mongox.Descending},
+				{"name": mongox.Ascending},
+			},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "5" {
+			t.Errorf("expected ID '5' with SortMany descending, got '%s'", result.ID)
+		}
+
+		// Test that Sort has priority over SortMany
+		err = coll.FindOne(ctx, &result, nil, mongox.FindOptions{
+			Sort: mongox.M{"id": mongox.Ascending},
+			SortMany: []mongox.M{
+				{"id": mongox.Descending},
+			},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "1" {
+			t.Errorf("expected ID '1' (Sort should override SortMany), got '%s'", result.ID)
+		}
+
+		// Test FindOne with AllowPartialResults option
+		err = coll.FindOne(ctx, &result, mongox.M{"id": "1"}, mongox.FindOptions{
+			AllowPartialResults: true,
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "1" {
+			t.Errorf("expected ID '1' with AllowPartialResults, got '%s'", result.ID)
+		}
+	})
+
+	t.Run("FindOne_ErrorCases", func(t *testing.T) {
+		var result testEntity
+
+		// Test FindOne with non-existent document
+		err := coll.FindOne(ctx, &result, mongox.M{"id": "999"})
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound, got %v", err)
+		}
+
+		// Test FindOne with invalid filter that won't match anything
+		err = coll.FindOne(ctx, &result, mongox.M{"nonexistent_field": "value"})
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound for non-matching filter, got %v", err)
+		}
+
+		// Test FindOne with nil destination (should error)
+		err = coll.FindOne(ctx, nil, mongox.M{"id": "1"})
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument for nil destination, got %v", err)
+		}
+
+		// Test FindOne with non-pointer destination (should error)
+		err = coll.FindOne(ctx, result, mongox.M{"id": "1"})
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument for non-pointer destination, got %v", err)
+		}
+	})
+
+	t.Run("Generic_FindOne", func(t *testing.T) {
+		// Test generic FindOne[T] method
+		result, err := mongox.FindOne[testEntity](ctx, coll, mongox.M{"id": "1"})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "1" {
+			t.Errorf("expected ID '1', got '%s'", result.ID)
+		}
+
+		// Test generic FindOne[T] with options
+		result, err = mongox.FindOne[testEntity](ctx, coll, nil, mongox.FindOptions{
+			Sort: mongox.M{"id": mongox.Descending},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "5" {
+			t.Errorf("expected ID '5' with descending sort, got '%s'", result.ID)
+		}
+
+		// Test generic FindOne[T] with skip and sort
+		result, err = mongox.FindOne[testEntity](ctx, coll, nil, mongox.FindOptions{
+			Skip: 1,
+			Sort: mongox.M{"id": mongox.Ascending},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "2" {
+			t.Errorf("expected ID '2' with skip=1 and ascending sort, got '%s'", result.ID)
+		}
+
+		// Test generic FindOne[T] error case
+		_, err = mongox.FindOne[testEntity](ctx, coll, mongox.M{"id": "999"})
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound, got %v", err)
+		}
+	})
+
+	t.Run("FindOne_ComplexFilters", func(t *testing.T) {
+		var result testEntity
+
+		// Test FindOne with $and operator
+		err := coll.FindOne(ctx, &result, mongox.M{
+			mongox.And: []mongox.M{
+				{"id": mongox.M{mongox.Gte: "2"}},
+				{"id": mongox.M{mongox.Lte: "3"}},
+			},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "2" && result.ID != "3" {
+			t.Errorf("expected ID '2' or '3', got '%s'", result.ID)
+		}
+
+		// Test FindOne with $or operator
+		err = coll.FindOne(ctx, &result, mongox.M{
+			mongox.Or: []mongox.M{
+				{"id": "1"},
+				{"id": "5"},
+			},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.ID != "1" && result.ID != "5" {
+			t.Errorf("expected ID '1' or '5', got '%s'", result.ID)
+		}
+
+		// Test FindOne with nested field
+		err = coll.FindOne(ctx, &result, mongox.M{
+			"struct.name": entities[0].Struct.Name,
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if result.Struct.Name != entities[0].Struct.Name {
+			t.Errorf("expected struct name '%s', got '%s'", entities[0].Struct.Name, result.Struct.Name)
+		}
+
+		// Test FindOne with array field
+		err = coll.FindOne(ctx, &result, mongox.M{
+			"slice": entities[1].Slice,
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if !reflect.DeepEqual(result.Slice, entities[1].Slice) {
+			t.Errorf("expected slice %v, got %v", entities[1].Slice, result.Slice)
+		}
+	})
+
+	t.Run("FindOne_FieldProjection", func(t *testing.T) {
+		// MongoDB doesn't support field projection directly in FindOne options in this wrapper,
+		// but we can test that we get full documents
+		var result testEntity
+		err := coll.FindOne(ctx, &result, mongox.M{"id": "1"})
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Verify all fields are populated
+		if result.ID == "" {
+			t.Error("ID should not be empty")
+		}
+		if result.Name == "" {
+			t.Error("Name should not be empty")
+		}
+		if result.Number == 0 {
+			t.Error("Number should not be zero")
+		}
+		if len(result.Slice) == 0 {
+			t.Error("Slice should not be empty")
+		}
+	})
+
+	t.Run("FindOne_TypeSafety", func(t *testing.T) {
+		// Test that FindOne properly handles different destination types
+
+		// Test with map destination
+		var mapResult map[string]interface{}
+		err := coll.FindOne(ctx, &mapResult, mongox.M{"id": "1"})
+		if err != nil {
+			t.Error(err)
+		}
+		if mapResult["id"] != "1" {
+			t.Errorf("expected map ID '1', got '%v'", mapResult["id"])
+		}
+
+		// Test with bson.M destination
+		var bsonResult bson.M
+		err = coll.FindOne(ctx, &bsonResult, mongox.M{"id": "1"})
+		if err != nil {
+			t.Error(err)
+		}
+		if bsonResult["id"] != "1" {
+			t.Errorf("expected bson.M ID '1', got '%v'", bsonResult["id"])
+		}
+	})
+
+	// Cleanup
+	_, err = coll.DeleteMany(ctx, nil)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestFindOneAndMethods(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	db := client.Database(dbName)
+	coll := db.Collection("find_one_and_methods_test")
+
+	t.Run("FindOneAndDelete", func(t *testing.T) {
+		// Setup test data
+		entity1 := newTestEntity("delete1")
+		entity2 := newTestEntity("delete2")
+		entity3 := newTestEntity("delete3")
+
+		_, err := coll.Insert(ctx, entity1, entity2, entity3)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Test FindOneAndDelete - should return the deleted document
+		var deletedEntity testEntity
+		err = coll.FindOneAndDelete(ctx, &deletedEntity, mongox.M{"id": "delete1"})
+		if err != nil {
+			t.Error(err)
+		}
+		if deletedEntity.ID != "delete1" {
+			t.Errorf("expected deleted entity ID 'delete1', got '%s'", deletedEntity.ID)
+		}
+		if deletedEntity.Name != entity1.Name {
+			t.Errorf("expected deleted entity name '%s', got '%s'", entity1.Name, deletedEntity.Name)
+		}
+
+		// Verify the document was actually deleted
+		var checkEntity testEntity
+		err = coll.FindOne(ctx, &checkEntity, mongox.M{"id": "delete1"})
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound after deletion, got %v", err)
+		}
+
+		// Test generic FindOneAndDelete[T]
+		deletedEntity2, err := mongox.FindOneAndDelete[testEntity](ctx, coll, mongox.M{"id": "delete2"})
+		if err != nil {
+			t.Error(err)
+		}
+		if deletedEntity2.ID != "delete2" {
+			t.Errorf("expected deleted entity ID 'delete2', got '%s'", deletedEntity2.ID)
+		}
+
+		// Verify the document was actually deleted
+		err = coll.FindOne(ctx, &checkEntity, mongox.M{"id": "delete2"})
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound after deletion, got %v", err)
+		}
+
+		// Test FindOneAndDelete with non-existent document
+		var nonExistentEntity testEntity
+		err = coll.FindOneAndDelete(ctx, &nonExistentEntity, mongox.M{"id": "nonexistent"})
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound for non-existent document, got %v", err)
+		}
+
+		// Test generic FindOneAndDelete[T] with non-existent document
+		_, err = mongox.FindOneAndDelete[testEntity](ctx, coll, mongox.M{"id": "nonexistent"})
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound for non-existent document, got %v", err)
+		}
+
+		// Test FindOneAndDelete with complex filter
+		err = coll.FindOneAndDelete(ctx, &deletedEntity, mongox.M{
+			"id": mongox.M{mongox.In: []string{"delete3", "delete4"}},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if deletedEntity.ID != "delete3" {
+			t.Errorf("expected deleted entity ID 'delete3', got '%s'", deletedEntity.ID)
+		}
+
+		// Cleanup remaining test data
+		_, _ = coll.DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.Regex: "delete"}})
+	})
+
+	t.Run("FindOneAndReplace", func(t *testing.T) {
+		// Setup test data
+		originalEntity := newTestEntity("replace1")
+		entity2 := newTestEntity("replace2")
+
+		_, err := coll.Insert(ctx, originalEntity, entity2)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Create replacement entity
+		replacementEntity := newTestEntity("replace1") // Same ID but different data
+		replacementEntity.Name = "replaced-name"
+		replacementEntity.Number = 99999
+
+		// Test FindOneAndReplace - should return the original document
+		var returnedEntity testEntity
+		err = coll.FindOneAndReplace(ctx, &returnedEntity, mongox.M{"id": "replace1"}, replacementEntity)
+		if err != nil {
+			t.Error(err)
+		}
+		if returnedEntity.ID != "replace1" {
+			t.Errorf("expected returned entity ID 'replace1', got '%s'", returnedEntity.ID)
+		}
+		if returnedEntity.Name != originalEntity.Name {
+			t.Errorf("expected returned entity to be original, got name '%s', expected '%s'", returnedEntity.Name, originalEntity.Name)
+		}
+
+		// Verify the document was actually replaced
+		var checkEntity testEntity
+		err = coll.FindOne(ctx, &checkEntity, mongox.M{"id": "replace1"})
+		if err != nil {
+			t.Error(err)
+		}
+		if checkEntity.Name != "replaced-name" {
+			t.Errorf("expected replaced entity name 'replaced-name', got '%s'", checkEntity.Name)
+		}
+		if checkEntity.Number != 99999 {
+			t.Errorf("expected replaced entity number 99999, got %d", checkEntity.Number)
+		}
+
+		// Test generic FindOneAndReplace[T]
+		anotherReplacement := newTestEntity("replace2")
+		anotherReplacement.Name = "another-replaced-name"
+
+		returnedEntity2, err := mongox.FindOneAndReplace[testEntity](ctx, coll, mongox.M{"id": "replace2"}, anotherReplacement)
+		if err != nil {
+			t.Error(err)
+		}
+		if returnedEntity2.ID != "replace2" {
+			t.Errorf("expected returned entity ID 'replace2', got '%s'", returnedEntity2.ID)
+		}
+		if returnedEntity2.Name == "another-replaced-name" {
+			t.Error("returned entity should be the original, not the replacement")
+		}
+
+		// Verify the document was actually replaced
+		err = coll.FindOne(ctx, &checkEntity, mongox.M{"id": "replace2"})
+		if err != nil {
+			t.Error(err)
+		}
+		if checkEntity.Name != "another-replaced-name" {
+			t.Errorf("expected replaced entity name 'another-replaced-name', got '%s'", checkEntity.Name)
+		}
+
+		// Test FindOneAndReplace with non-existent document
+		var nonExistentEntity testEntity
+		err = coll.FindOneAndReplace(ctx, &nonExistentEntity, mongox.M{"id": "nonexistent"}, newTestEntity("nonexistent"))
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound for non-existent document, got %v", err)
+		}
+
+		// Test generic FindOneAndReplace[T] with non-existent document
+		_, err = mongox.FindOneAndReplace[testEntity](ctx, coll, mongox.M{"id": "nonexistent"}, newTestEntity("nonexistent"))
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound for non-existent document, got %v", err)
+		}
+
+		// Cleanup test data
+		_, _ = coll.DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.Regex: "replace"}})
+	})
+
+	t.Run("FindOneAndUpdate", func(t *testing.T) {
+		// Setup test data
+		originalEntity := newTestEntity("update1")
+		entity2 := newTestEntity("update2")
+		entity3 := newTestEntity("update3")
+
+		_, err := coll.Insert(ctx, originalEntity, entity2, entity3)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Test FindOneAndUpdate with $set operator - should return original document
+		var returnedEntity testEntity
+		err = coll.FindOneAndUpdate(ctx, &returnedEntity, mongox.M{"id": "update1"}, mongox.M{
+			mongox.Set: mongox.M{
+				"name":   "updated-name",
+				"number": 12345,
+			},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if returnedEntity.ID != "update1" {
+			t.Errorf("expected returned entity ID 'update1', got '%s'", returnedEntity.ID)
+		}
+		if returnedEntity.Name != originalEntity.Name {
+			t.Errorf("expected returned entity to be original, got name '%s', expected '%s'", returnedEntity.Name, originalEntity.Name)
+		}
+
+		// Verify the document was actually updated
+		var checkEntity testEntity
+		err = coll.FindOne(ctx, &checkEntity, mongox.M{"id": "update1"})
+		if err != nil {
+			t.Error(err)
+		}
+		if checkEntity.Name != "updated-name" {
+			t.Errorf("expected updated entity name 'updated-name', got '%s'", checkEntity.Name)
+		}
+		if checkEntity.Number != 12345 {
+			t.Errorf("expected updated entity number 12345, got %d", checkEntity.Number)
+		}
+
+		// Test FindOneAndUpdate with $inc operator
+		err = coll.FindOneAndUpdate(ctx, &returnedEntity, mongox.M{"id": "update1"}, mongox.M{
+			mongox.Inc: mongox.M{"number": 100},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if returnedEntity.Number != 12345 {
+			t.Errorf("expected returned entity to have original number 12345, got %d", returnedEntity.Number)
+		}
+
+		// Verify the increment was applied
+		err = coll.FindOne(ctx, &checkEntity, mongox.M{"id": "update1"})
+		if err != nil {
+			t.Error(err)
+		}
+		if checkEntity.Number != 12445 {
+			t.Errorf("expected incremented number 12445, got %d", checkEntity.Number)
+		}
+
+		// Test generic FindOneAndUpdate[T]
+		returnedEntity2, err := mongox.FindOneAndUpdate[testEntity](ctx, coll, mongox.M{"id": "update2"}, mongox.M{
+			mongox.Set: mongox.M{"name": "generic-updated-name"},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		if returnedEntity2.ID != "update2" {
+			t.Errorf("expected returned entity ID 'update2', got '%s'", returnedEntity2.ID)
+		}
+		if returnedEntity2.Name == "generic-updated-name" {
+			t.Error("returned entity should be the original, not the updated version")
+		}
+
+		// Verify the document was actually updated
+		err = coll.FindOne(ctx, &checkEntity, mongox.M{"id": "update2"})
+		if err != nil {
+			t.Error(err)
+		}
+		if checkEntity.Name != "generic-updated-name" {
+			t.Errorf("expected updated entity name 'generic-updated-name', got '%s'", checkEntity.Name)
+		}
+
+		// Test FindOneAndUpdate with complex update using multiple operators
+		err = coll.FindOneAndUpdate(ctx, &returnedEntity, mongox.M{"id": "update3"}, mongox.M{
+			mongox.Set:  mongox.M{"name": "complex-updated"},
+			mongox.Inc:  mongox.M{"number": 500},
+			mongox.Push: mongox.M{"slice": 999},
+		})
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Verify complex update was applied
+		err = coll.FindOne(ctx, &checkEntity, mongox.M{"id": "update3"})
+		if err != nil {
+			t.Error(err)
+		}
+		if checkEntity.Name != "complex-updated" {
+			t.Errorf("expected updated entity name 'complex-updated', got '%s'", checkEntity.Name)
+		}
+		if checkEntity.Number != entity3.Number+500 {
+			t.Errorf("expected incremented number %d, got %d", entity3.Number+500, checkEntity.Number)
+		}
+		found999 := false
+		for _, val := range checkEntity.Slice {
+			if val == 999 {
+				found999 = true
+				break
+			}
+		}
+		if !found999 {
+			t.Error("expected 999 to be pushed to slice")
+		}
+
+		// Test FindOneAndUpdate with non-existent document
+		var nonExistentEntity testEntity
+		err = coll.FindOneAndUpdate(ctx, &nonExistentEntity, mongox.M{"id": "nonexistent"}, mongox.M{
+			mongox.Set: mongox.M{"name": "wont-work"},
+		})
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound for non-existent document, got %v", err)
+		}
+
+		// Test generic FindOneAndUpdate[T] with non-existent document
+		_, err = mongox.FindOneAndUpdate[testEntity](ctx, coll, mongox.M{"id": "nonexistent"}, mongox.M{
+			mongox.Set: mongox.M{"name": "wont-work"},
+		})
+		if !errors.Is(err, mongox.ErrNotFound) {
+			t.Errorf("expected ErrNotFound for non-existent document, got %v", err)
+		}
+
+		// Test FindOneAndUpdate with invalid update document
+		err = coll.FindOneAndUpdate(ctx, &returnedEntity, mongox.M{"id": "update1"}, mongox.M{
+			"invalid": "no-dollar-operator",
+		})
+		if !errors.Is(err, mongox.ErrInvalidArgument) {
+			t.Errorf("expected ErrInvalidArgument for invalid update document, got %v", err)
+		}
+
+		// Cleanup test data
+		_, _ = coll.DeleteMany(ctx, mongox.M{"id": mongox.M{mongox.Regex: "update"}})
+	})
+
+	t.Run("FindOneAnd_ErrorHandling", func(t *testing.T) {
+		// Test error handling for all FindOneAnd methods
+
+		// Test with nil destination - should get ErrNotFound since document doesn't exist
+		err := coll.FindOneAndDelete(ctx, nil, mongox.M{"id": "test"})
+		if err == nil {
+			t.Error("expected error for nil destination in FindOneAndDelete")
+		}
+
+		err = coll.FindOneAndReplace(ctx, nil, mongox.M{"id": "test"}, newTestEntity("test"))
+		if err == nil {
+			t.Error("expected error for nil destination in FindOneAndReplace")
+		}
+
+		err = coll.FindOneAndUpdate(ctx, nil, mongox.M{"id": "test"}, mongox.M{mongox.Set: mongox.M{"name": "test"}})
+		if err == nil {
+			t.Error("expected error for nil destination in FindOneAndUpdate")
+		}
+
+		// Test with non-pointer destination - should get error
+		var entity testEntity
+		err = coll.FindOneAndDelete(ctx, entity, mongox.M{"id": "test"})
+		if err == nil {
+			t.Error("expected error for non-pointer destination in FindOneAndDelete")
+		}
+
+		err = coll.FindOneAndReplace(ctx, entity, mongox.M{"id": "test"}, newTestEntity("test"))
+		if err == nil {
+			t.Error("expected error for non-pointer destination in FindOneAndReplace")
+		}
+
+		err = coll.FindOneAndUpdate(ctx, entity, mongox.M{"id": "test"}, mongox.M{mongox.Set: mongox.M{"name": "test"}})
+		if err == nil {
+			t.Error("expected error for non-pointer destination in FindOneAndUpdate")
+		}
+	})
+
+	t.Run("FindOneAnd_TypeSafety", func(t *testing.T) {
+		// Setup test data
+		testEntity := newTestEntity("typesafety")
+		_, err := coll.Insert(ctx, testEntity)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Test with map destination
+		var mapResult map[string]interface{}
+		err = coll.FindOneAndDelete(ctx, &mapResult, mongox.M{"id": "typesafety"})
+		if err != nil {
+			t.Error(err)
+		}
+		if mapResult["id"] != "typesafety" {
+			t.Errorf("expected map ID 'typesafety', got '%v'", mapResult["id"])
+		}
+
+		// Re-insert for next test
+		_, err = coll.Insert(ctx, testEntity)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Test with bson.M destination
+		var bsonResult bson.M
+		replacementMap := map[string]interface{}{
+			"id":     "typesafety",
+			"name":   "replaced-via-map",
+			"number": 777,
+		}
+		err = coll.FindOneAndReplace(ctx, &bsonResult, mongox.M{"id": "typesafety"}, replacementMap)
+		if err != nil {
+			t.Error(err)
+		}
+		if bsonResult["id"] != "typesafety" {
+			t.Errorf("expected bson.M ID 'typesafety', got '%v'", bsonResult["id"])
+		}
+
+		// Cleanup
+		_, _ = coll.DeleteMany(ctx, mongox.M{"id": "typesafety"})
+	})
+
+	// Final cleanup
+	_, err := coll.DeleteMany(ctx, nil)
+	if err != nil && !errors.Is(err, mongox.ErrNotFound) {
+		t.Error(err)
+	}
+}

@@ -56,6 +56,36 @@ func FindAll[T any](ctx context.Context, coll *Collection, opts ...FindOptions) 
 	return result, nil
 }
 
+// FindOneAndDelete finds a document in the collection using filter and deletes it.
+// It returns ErrNotFound if no document is found.
+func FindOneAndDelete[T any](ctx context.Context, coll *Collection, filter M) (T, error) {
+	var result T
+	if err := coll.FindOneAndDelete(ctx, &result, filter); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+// FindOneAndReplace finds a document in the collection using filter and replaces it.
+// It returns ErrNotFound if no document is found.
+func FindOneAndReplace[T any](ctx context.Context, coll *Collection, filter M, replacement any) (T, error) {
+	var result T
+	if err := coll.FindOneAndReplace(ctx, &result, filter, replacement); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+// FindOneAndUpdate finds a document in the collection using filter and updates it.
+// It returns ErrNotFound if no document is found.
+func FindOneAndUpdate[T any](ctx context.Context, coll *Collection, filter M, update any) (T, error) {
+	var result T
+	if err := coll.FindOneAndUpdate(ctx, &result, filter, update); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
 // Count counts the number of documents in the collection using filter.
 // Nil filter means count all documents.
 func Count(ctx context.Context, coll *Collection, filter M) (int64, error) {
