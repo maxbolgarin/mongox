@@ -29,8 +29,8 @@ type Client struct {
 // It connects to the MongoDB cluster and pings the primary to validate the connection.
 func Connect(ctx context.Context, cfg Config) (*Client, error) {
 	opts := options.Client().ApplyURI(buildURL(cfg))
-	if cfg.URI != "" {
-		opts = options.Client().ApplyURI(cfg.URI)
+	if cfg.Connection != nil && cfg.Connection.TLS != nil && cfg.Connection.TLS.TLSConfig != nil {
+		opts.SetTLSConfig(cfg.Connection.TLS.TLSConfig)
 	}
 
 	lang.IfV(cfg.AppName, func() { opts.SetAppName(cfg.AppName) })
@@ -148,6 +148,10 @@ func (m *Client) AsyncDatabase(ctx context.Context, name string, workers int, lo
 }
 
 func buildURL(cfg Config) string {
+	if cfg.URI != "" {
+		return cfg.URI
+	}
+
 	out := strings.Builder{}
 	out.WriteString("mongodb://")
 	if cfg.Address == "" && len(cfg.Hosts) == 0 {
@@ -166,7 +170,7 @@ func buildURL(cfg Config) string {
 			out.WriteString("," + host)
 		}
 	}
-	if cfg.Connection != nil && cfg.Connection.TLS != nil {
+	if cfg.Connection != nil && cfg.Connection.TLS != nil && cfg.Connection.TLS.TLSConfig == nil {
 		out.WriteString("/?tls=true")
 
 		if cfg.Connection.TLS.Insecure {

@@ -1,6 +1,7 @@
 package mongox
 
 import (
+	"crypto/tls"
 	"net/url"
 	"strings"
 	"time"
@@ -80,7 +81,7 @@ type TLSConfig struct {
 	Insecure bool `yaml:"insecure" json:"insecure" env:"MONGO_TLS_INSECURE"`
 
 	// CAFilePath is the path to the file with either a single or bundle of certificate authorities to be considered
-	// trusted when making a TLS connection. This is optional and used for authentication with MONGODB-X509.
+	// trusted when making a TLS connection.
 	CAFilePath string `yaml:"ca_file_path" json:"ca_file_path" env:"MONGO_CA_FILE_PATH"`
 
 	// CertificateKeyFilePath is the path to the client certificate file or the client private key file. In the case that
@@ -99,6 +100,10 @@ type TLSConfig struct {
 	// CertificateKeyPassword is the password to the client certificate file or the client private key file.
 	// This is optional and used for authentication with MONGODB-X509.
 	PrivateKeyPassword string `yaml:"certificate_key_password" json:"certificate_key_password" env:"MONGO_CERTIFICATE_KEY_PASSWORD"`
+
+	// TLSConfig is the TLS configuration for the client connection.
+	// If it is provided, it will override all other TLS configuration.
+	TLSConfig *tls.Config `yaml:"tls_config" json:"tls_config" env:"MONGO_TLS_CONFIG"`
 }
 
 // AuthConfig contains authentication configuration for creating MongoDB client.
