@@ -282,6 +282,20 @@ func (ac *AsyncCollection) BulkWrite(queueKey, taskName string, models []mongo.W
 	})
 }
 
+// QueuesLength returns number of tasks for each queue.
+func (ac *AsyncCollection) QueuesLength() map[string]int {
+	out := make(map[string]int, len(ac.queue.Stat()))
+	for k, v := range ac.queue.Stat() {
+		out[k] = v.Length
+	}
+	return out
+}
+
+// QueueLength returns number of tasks for a given queue.
+func (ac *AsyncCollection) QueueLength(queueKey string) int {
+	return ac.QueuesLength()[queueKey]
+}
+
 func (ac *AsyncCollection) push(queueKey, taskName, opName string, f gorder.TaskFunc) {
 	if queueKey == "" {
 		queueKey = ac.coll.coll.Name()
@@ -479,4 +493,14 @@ func (qc *QueueCollection) DeleteMany(filter M) {
 // the whole operation continues.
 func (qc *QueueCollection) BulkWrite(models []mongo.WriteModel, isOrdered bool) {
 	qc.AsyncCollection.BulkWrite(qc.name, "", models, isOrdered)
+}
+
+// QueuesLength returns number of tasks for each queue.
+func (qc *QueueCollection) QueuesLength() map[string]int {
+	return qc.AsyncCollection.QueuesLength()
+}
+
+// QueueLength returns number of tasks for a given queue.
+func (qc *QueueCollection) QueueLength(queueKey string) int {
+	return qc.AsyncCollection.QueueLength(queueKey)
 }
