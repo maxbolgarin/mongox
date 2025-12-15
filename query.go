@@ -12,6 +12,43 @@ import (
 // M is a map containing query operators to filter documents.
 type M bson.M
 
+type ID bson.ObjectID
+
+// NewIDFromObjectID creates a new ID from a bson.ObjectID.
+func NewIDFromObjectID(id bson.ObjectID) ID {
+	return ID(id)
+}
+
+// NewIDFromHex creates a new ID from a hex string.
+func NewIDFromHex(id string) (ID, error) {
+	bgsonID, err := bson.ObjectIDFromHex(id)
+	return ID(bgsonID), err
+}
+
+// MustIDFromHex creates a new ID from a hex string and panics if the ID is invalid.
+func MustIDFromHex(id string) ID {
+	bsonID, err := NewIDFromHex(id)
+	if err != nil {
+		panic(err)
+	}
+	return bsonID
+}
+
+// Hex returns a hex string representation of the ID.
+func (id ID) Hex() string {
+	return id.ObjectID().Hex()
+}
+
+// String returns a string representation of the ID.
+func (id ID) String() string {
+	return id.Hex()
+}
+
+// ObjectID returns the original bson.ObjectID.
+func (id ID) ObjectID() bson.ObjectID {
+	return bson.ObjectID(id)
+}
+
 // NewM creates a new Filter based on pairs.
 // Pairs must be in the form NewF(key1, value1, key2, value2, ...)
 func NewM(pairs ...any) M {
