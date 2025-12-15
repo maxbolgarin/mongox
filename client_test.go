@@ -434,3 +434,110 @@ func TestComprehensiveTLSSetup(t *testing.T) {
 		t.Errorf("DeleteMany should succeed with TLS connection: %v", err)
 	}
 }
+
+func TestConfigRead(t *testing.T) {
+	// Create a temporary config file
+	tempDir, err := os.MkdirTemp("", "mongox-config-test")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a valid JSON config file
+	configPath := filepath.Join(tempDir, "config.json")
+	configContent := `{
+		"address": "localhost:27017",
+		"app_name": "test-app"
+	}`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	// Test reading config from file
+	var cfg mongox.Config
+	err = cfg.Read(configPath)
+	if err != nil {
+		t.Errorf("Config.Read should succeed: %v", err)
+	}
+	if cfg.Address != "localhost:27017" {
+		t.Errorf("expected address 'localhost:27017', got '%s'", cfg.Address)
+	}
+	if cfg.AppName != "test-app" {
+		t.Errorf("expected app_name 'test-app', got '%s'", cfg.AppName)
+	}
+
+	// Test reading from non-existent file
+	var cfg2 mongox.Config
+	err = cfg2.Read("/non/existent/file.json")
+	if err == nil {
+		t.Error("Config.Read should return error for non-existent file")
+	}
+}
+
+func TestConfigReadFromEnv(t *testing.T) {
+	// Test reading config from environment
+	// Set a test environment variable
+	os.Setenv("ADDRESS", "env-test:27017")
+	defer os.Unsetenv("ADDRESS")
+
+	var cfg mongox.Config
+	err := cfg.Read() // No file path = read from env
+	// This may or may not work depending on cleanenv behavior with missing vars
+	// But it should not panic
+	_ = err
+}
+
+func TestIsTLSConnectionDirect(t *testing.T) {
+	// Test IsTLSConnection directly with a mock client
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Test 1: Client with TLS config in connection
+	cfg1 := mongox.Config{
+		Address: "localhost:27017",
+		Connection: &mongox.ConnectionConfig{
+			ConnectTimeout: lang.Ptr(1 * time.Second),
+			TLS: &mongox.TLSConfig{
+				Insecure: true,
+			},
+		},
+	}
+
+	client1, err := mongox.Connect(ctx, cfg1)
+	if err == nil && client1 != nil {
+		defer client1.Disconnect(ctx)
+		// IsTLSConnection should return true
+		if !mongox.IsTLSConnection(client1) {
+			t.Error("IsTLSConnection should return true for TLS-configured client")
+		}
+	}
+
+	// Test 2: Client with TLS in URI
+	cfg2 := mongox.Config{
+		URI: "mongodb://localhost:27017/?tls=true",
+	}
+
+	client2, err := mongox.Connect(ctx, cfg2)
+	if err == nil && client2 != nil {
+		defer client2.Disconnect(ctx)
+		if !mongox.IsTLSConnection(client2) {
+			t.Error("IsTLSConnection should return true for URI with tls=true")
+		}
+	}
+
+	// Test 3: Client without TLS
+	cfg3 := mongox.Config{
+		Address: "localhost:27017",
+		Connection: &mongox.ConnectionConfig{
+			ConnectTimeout: lang.Ptr(1 * time.Second),
+		},
+	}
+
+	client3, err := mongox.Connect(ctx, cfg3)
+	if err == nil && client3 != nil {
+		defer client3.Disconnect(ctx)
+		if mongox.IsTLSConnection(client3) {
+			t.Error("IsTLSConnection should return false for client without TLS")
+		}
+	}
+}

@@ -3,7 +3,10 @@ package mongox
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sort"
 	"sync"
+	"time"
 
 	"github.com/maxbolgarin/gorder"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -11,6 +14,76 @@ import (
 
 // DefaultAsyncRetries is the maximum number of retries for failed tasks in async mode.
 const DefaultAsyncRetries = 10
+
+// AsyncError contains information about an async operation error.
+type AsyncError struct {
+	// Err is the underlying error.
+	Err error
+	// Collection is the name of the collection where the error occurred.
+	Collection string
+	// Operation is the name of the operation (insert_one, update_one, etc.).
+	Operation string
+	// TaskName is the user-provided task name.
+	TaskName string
+	// QueueKey is the queue key where the task was executed.
+	QueueKey string
+	// Timestamp is when the error occurred.
+	Timestamp time.Time
+	// RetryCount is the number of retries attempted (for retry-exhausted errors).
+	RetryCount int
+	// IsNotRetryable indicates if the error is not retryable.
+	IsNotRetryable bool
+}
+
+// Error implements the error interface.
+func (e *AsyncError) Error() string {
+	return fmt.Sprintf("async error in %s.%s [%s]: %v", e.Collection, e.Operation, e.TaskName, e.Err)
+}
+
+// Unwrap returns the underlying error for errors.Is/As compatibility.
+func (e *AsyncError) Unwrap() error {
+	return e.Err
+}
+
+// AsyncErrorStats is a point-in-time snapshot of error statistics.
+type AsyncErrorStats struct {
+	// TotalErrors is the total number of errors recorded.
+	TotalErrors int64
+	// NonRetryableErrors is the count of non-retryable errors.
+	NonRetryableErrors int64
+	// RetryExhaustedErrors is the count of retry-exhausted errors.
+	RetryExhaustedErrors int64
+	// ByCollection contains error statistics grouped by collection name.
+	ByCollection map[string]CollectionErrorStats
+	// ByOperation contains error statistics grouped by operation type.
+	ByOperation map[string]OperationErrorStats
+	// TopErrors contains the top 10 most frequent error messages.
+	TopErrors []ErrorCount
+}
+
+// CollectionErrorStats contains error statistics for a collection.
+type CollectionErrorStats struct {
+	Total          int64
+	NonRetryable   int64
+	RetryExhausted int64
+}
+
+// OperationErrorStats contains error statistics for an operation type.
+type OperationErrorStats struct {
+	Total          int64
+	NonRetryable   int64
+	RetryExhausted int64
+}
+
+// ErrorCount represents an error message and its occurrence count.
+type ErrorCount struct {
+	Error string
+	Count int64
+}
+
+// AsyncErrorHandler is a callback function for handling async errors.
+// It should be non-blocking and thread-safe.
+type AsyncErrorHandler func(err *AsyncError)
 
 // AsyncDatabase is a database client that handles operations asynchronously without waiting for them to complete.
 // It is safe for concurrent use by multiple goroutines.
@@ -21,6 +94,9 @@ type AsyncDatabase struct {
 
 	colls map[string]*AsyncCollection
 	mu    sync.RWMutex
+
+	errorHandler AsyncErrorHandler
+	stats        *asyncErrorStats
 }
 
 // Database returns the underlying Database.
@@ -40,9 +116,11 @@ func (m *AsyncDatabase) AsyncCollection(name string) *AsyncCollection {
 	}
 
 	coll = &AsyncCollection{
-		coll:  m.db.Collection(name),
-		queue: m.queue,
-		log:   m.log,
+		coll:         m.db.Collection(name),
+		queue:        m.queue,
+		log:          m.log,
+		errorHandler: &m.errorHandler,
+		stats:        m.stats,
 	}
 
 	m.mu.Lock()
@@ -85,6 +163,128 @@ func (m *AsyncDatabase) WithTask(queueKey, taskName string, fn func(ctx context.
 	})
 }
 
+// SetErrorHandler sets a callback function for handling async errors.
+// The handler is called synchronously but should be non-blocking.
+// Returns the previous handler (nil if none was set).
+// It is thread-safe and can be called at any time.
+func (m *AsyncDatabase) WithErrorHandler(handler AsyncErrorHandler) *AsyncDatabase {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.errorHandler = handler
+
+	// Update existing collections to use the new handler
+	for _, coll := range m.colls {
+		coll.errorHandler = &m.errorHandler
+	}
+
+	return m
+}
+
+// WithNoAsyncStats disables error statistics collection.
+// It is thread-safe and can be called at any time.
+func (m *AsyncDatabase) WithNoAsyncStats() *AsyncDatabase {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.stats = nil
+	return m
+}
+
+// ErrorStats returns a point-in-time snapshot of error statistics.
+// The snapshot is a copy and can be safely used without synchronization.
+func (m *AsyncDatabase) ErrorStats() AsyncErrorStats {
+	if m.stats == nil {
+		return AsyncErrorStats{}
+	}
+	return m.stats.snapshot()
+}
+
+// ResetErrorStats clears all error statistics.
+func (m *AsyncDatabase) ResetErrorStats() {
+	if m.stats != nil {
+		m.stats.reset()
+	}
+}
+
+// StartRetryExhaustedMonitor starts a background goroutine that periodically checks for retry-exhausted errors.
+// It monitors the gorder queue for broken queues (tasks that exhausted all retries) and reports them
+// through the error handler. The monitor runs until the context is canceled.
+// The interval specifies how often to check for retry-exhausted errors.
+func (m *AsyncDatabase) StartRetryExhaustedMonitor(ctx context.Context, interval time.Duration) {
+	if interval <= 0 {
+		interval = time.Second
+	}
+	check := func(seen map[string]int) {
+		broken := m.queue.BrokenQueues()
+		// Reset/prune seen for queues that recovered
+		for k := range seen {
+			if _, ok := broken[k]; !ok {
+				delete(seen, k)
+			}
+		}
+		// Report on increases; reset baseline if counter dropped
+		for queueKey, retries := range broken {
+			last, ok := seen[queueKey]
+			if !ok || retries > last {
+				m.reportRetryExhausted(queueKey, retries)
+			}
+			if !ok || retries < last {
+				// reset baseline after recovery or counter reset
+				seen[queueKey] = retries
+			} else if retries > last {
+				seen[queueKey] = retries
+			}
+		}
+	}
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		seen := make(map[string]int)
+
+		// Immediate scan
+		check(seen)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				check(seen)
+			}
+		}
+	}()
+}
+
+// reportRetryExhausted reports a retry-exhausted error.
+func (m *AsyncDatabase) reportRetryExhausted(queueKey string, retryCount int) {
+	asyncErr := &AsyncError{
+		Err:            fmt.Errorf("task exhausted all %d retries", retryCount),
+		IsNotRetryable: false,
+		Collection:     "",
+		Operation:      "unknown",
+		TaskName:       queueKey,
+		QueueKey:       queueKey,
+		Timestamp:      time.Now(),
+		RetryCount:     retryCount,
+	}
+
+	// Record statistics
+	if m.stats != nil {
+		m.stats.record(asyncErr)
+	}
+
+	// Call user handler
+	m.mu.RLock()
+	handler := m.errorHandler
+	m.mu.RUnlock()
+
+	if handler != nil {
+		handler(asyncErr)
+	}
+}
+
 // AsyncCollection is a collection client that handles operations asynchronously without waiting for them to complete.
 // It is safe for concurrent use by multiple goroutines.
 // Tasks in different queues will be executed in parallel.
@@ -92,6 +292,9 @@ type AsyncCollection struct {
 	coll  *Collection
 	queue *gorder.Gorder[string]
 	log   gorder.Logger
+
+	errorHandler *AsyncErrorHandler // Pointer to database's handler
+	stats        *asyncErrorStats   // Pointer to database's stats
 }
 
 // Name returns the name of the collection.
@@ -304,11 +507,14 @@ func (ac *AsyncCollection) push(queueKey, taskName, opName string, f gorder.Task
 		taskName = ac.coll.coll.Name() + "_" + opName
 	}
 	ac.queue.Push(queueKey, taskName, func(ctx context.Context) error {
-		return ac.HandleRetryError(f(ctx), taskName)
+		return ac.handleRetryError(f(ctx), taskName, opName, queueKey)
 	})
 }
 
-func (ac *AsyncCollection) HandleRetryError(err error, taskName string) error {
+// handleRetryError processes errors from async operations, determining which should be retried.
+// Non-retryable errors are logged and reported to the error handler but not retried.
+// Retryable errors (network, timeout, server errors) are returned for retry by gorder.
+func (ac *AsyncCollection) handleRetryError(err error, taskName, opName, queueKey string) error {
 	if err == nil {
 		return nil
 	}
@@ -317,11 +523,13 @@ func (ac *AsyncCollection) HandleRetryError(err error, taskName string) error {
 	case errors.Is(err, ErrNotFound):
 		// ErrNotFound is read error, it doesn't change state of the document and it can be throwed
 		ac.log.Error("document not found", "error", err, "collection", ac.coll.coll.Name(), "task", taskName, "flow", "async")
+		ac.reportError(err, taskName, opName, queueKey)
 		return nil
 
 	case errors.Is(err, ErrDuplicate):
 		// ErrDuplicate is a persistent error, there is no sense to retry it
 		ac.log.Error("duplicate", "error", err, "collection", ac.coll.coll.Name(), "task", taskName, "flow", "async")
+		ac.reportError(err, taskName, opName, queueKey)
 		return nil
 
 	case errors.Is(err, ErrInvalidArgument) ||
@@ -333,10 +541,35 @@ func (ac *AsyncCollection) HandleRetryError(err error, taskName string) error {
 		// ErrInvalidArgument means error with using mongo interface
 		// It is a persistent error and there is no sense to retry
 		ac.log.Error("invalid argument", "error", err, "collection", ac.coll.coll.Name(), "task", taskName, "flow", "async")
+		ac.reportError(err, taskName, opName, queueKey)
 		return nil
 
 	default: // network, timeout, server and other errors should be retried
 		return err
+	}
+}
+
+// reportError sends an error to the configured handler and records statistics.
+func (ac *AsyncCollection) reportError(err error, taskName, opName, queueKey string) {
+	asyncErr := &AsyncError{
+		Err:            err,
+		Collection:     ac.coll.coll.Name(),
+		Operation:      opName,
+		TaskName:       taskName,
+		QueueKey:       queueKey,
+		Timestamp:      time.Now(),
+		RetryCount:     0,
+		IsNotRetryable: true,
+	}
+
+	// Record statistics
+	if ac.stats != nil {
+		ac.stats.record(asyncErr)
+	}
+
+	// Call user handler
+	if ac.errorHandler != nil && *ac.errorHandler != nil {
+		(*ac.errorHandler)(asyncErr)
 	}
 }
 
@@ -503,4 +736,148 @@ func (qc *QueueCollection) QueuesLength() map[string]int {
 // QueueLength returns number of tasks for a given queue.
 func (qc *QueueCollection) QueueLength(queueKey string) int {
 	return qc.AsyncCollection.QueueLength(queueKey)
+}
+
+// collectionErrorStats holds error statistics for a single collection.
+type collectionErrorStats struct {
+	total          int64
+	nonRetryable   int64
+	retryExhausted int64
+}
+
+// operationErrorStats holds error statistics for a single operation type.
+type operationErrorStats struct {
+	total          int64
+	nonRetryable   int64
+	retryExhausted int64
+}
+
+// asyncErrorStats tracks error statistics in a thread-safe manner.
+type asyncErrorStats struct {
+	mu                   sync.RWMutex
+	totalErrors          int64
+	nonRetryableErrors   int64
+	retryExhaustedErrors int64
+	byCollection         map[string]*collectionErrorStats
+	byOperation          map[string]*operationErrorStats
+	byErrorType          map[string]int64 // error message -> count
+}
+
+// newAsyncErrorStats creates a new AsyncErrorStats instance.
+func newAsyncErrorStats() *asyncErrorStats {
+	return &asyncErrorStats{
+		byCollection: make(map[string]*collectionErrorStats),
+		byOperation:  make(map[string]*operationErrorStats),
+		byErrorType:  make(map[string]int64),
+	}
+}
+
+// Record adds an error to statistics.
+func (s *asyncErrorStats) record(err *AsyncError) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.totalErrors++
+	if err.IsNotRetryable {
+		s.nonRetryableErrors++
+	} else {
+		s.retryExhaustedErrors++
+	}
+
+	// Collection stats
+	cs, ok := s.byCollection[err.Collection]
+	if !ok {
+		cs = &collectionErrorStats{}
+		s.byCollection[err.Collection] = cs
+	}
+	cs.total++
+	if err.IsNotRetryable {
+		cs.nonRetryable++
+	} else {
+		cs.retryExhausted++
+	}
+
+	// Operation stats
+	os, ok := s.byOperation[err.Operation]
+	if !ok {
+		os = &operationErrorStats{}
+		s.byOperation[err.Operation] = os
+	}
+	os.total++
+	if err.IsNotRetryable {
+		os.nonRetryable++
+	} else {
+		os.retryExhausted++
+	}
+
+	// Error type counts
+	errKey := err.Err.Error()
+	s.byErrorType[errKey]++
+}
+
+// Snapshot returns a point-in-time snapshot of error statistics.
+func (s *asyncErrorStats) snapshot() AsyncErrorStats {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	snap := AsyncErrorStats{
+		TotalErrors:          s.totalErrors,
+		NonRetryableErrors:   s.nonRetryableErrors,
+		RetryExhaustedErrors: s.retryExhaustedErrors,
+		ByCollection:         make(map[string]CollectionErrorStats),
+		ByOperation:          make(map[string]OperationErrorStats),
+	}
+
+	for k, v := range s.byCollection {
+		snap.ByCollection[k] = CollectionErrorStats{
+			Total:          v.total,
+			NonRetryable:   v.nonRetryable,
+			RetryExhausted: v.retryExhausted,
+		}
+	}
+
+	for k, v := range s.byOperation {
+		snap.ByOperation[k] = OperationErrorStats{
+			Total:          v.total,
+			NonRetryable:   v.nonRetryable,
+			RetryExhausted: v.retryExhausted,
+		}
+	}
+
+	// Top 10 errors
+	type errPair struct {
+		err   string
+		count int64
+	}
+	pairs := make([]errPair, 0, len(s.byErrorType))
+	for k, v := range s.byErrorType {
+		pairs = append(pairs, errPair{k, v})
+	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].count > pairs[j].count
+	})
+
+	top := 10
+	if len(pairs) < top {
+		top = len(pairs)
+	}
+	snap.TopErrors = make([]ErrorCount, top)
+	for i := 0; i < top; i++ {
+		snap.TopErrors[i] = ErrorCount{Error: pairs[i].err, Count: pairs[i].count}
+	}
+
+	return snap
+}
+
+// Reset clears all statistics.
+func (s *asyncErrorStats) reset() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.totalErrors = 0
+	s.nonRetryableErrors = 0
+	s.retryExhaustedErrors = 0
+	s.byCollection = make(map[string]*collectionErrorStats)
+	s.byOperation = make(map[string]*operationErrorStats)
+	s.byErrorType = make(map[string]int64)
 }

@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -1461,6 +1462,210 @@ func TestAsync(t *testing.T) {
 		entity3.Bool = !entity3.Bool
 		entity3.Struct.Name = ""
 		testAsync(t, ctx, db, entity3, mongox.M{"id": "3"})
+	})
+}
+
+func TestAsyncErrorHandling(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if err := client.Ping(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("ErrorHandler_ReceivesErrors", func(t *testing.T) {
+		var receivedErrors []*mongox.AsyncError
+		var mu sync.Mutex
+
+		asyncDB := client.AsyncDatabase(ctx, dbName+"_error_test", 1, slog.Default())
+		asyncDB.WithErrorHandler(func(err *mongox.AsyncError) {
+			mu.Lock()
+			defer mu.Unlock()
+			receivedErrors = append(receivedErrors, err)
+		})
+
+		coll := asyncDB.AsyncCollection("error_handler_test")
+
+		// Trigger a duplicate key error
+		err := client.Database(dbName+"_error_test").Collection("error_handler_test").CreateIndex(ctx, true, "id")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		entity := newTestEntity("dup1")
+		coll.InsertOne("q1", "t1", entity)
+		time.Sleep(500 * time.Millisecond) // Wait for async operation
+
+		// Insert duplicate - should trigger error handler
+		coll.InsertOne("q1", "t2", entity)
+		time.Sleep(500 * time.Millisecond) // Wait for async operation
+
+		mu.Lock()
+		if len(receivedErrors) != 1 {
+			t.Errorf("expected 1 error, got %d", len(receivedErrors))
+		}
+		if len(receivedErrors) > 0 && !errors.Is(receivedErrors[0].Err, mongox.ErrDuplicate) {
+			t.Errorf("expected ErrDuplicate, got %v", receivedErrors[0].Err)
+		}
+		if len(receivedErrors) > 0 && receivedErrors[0].Collection != "error_handler_test" {
+			t.Errorf("expected collection 'error_handler_test', got %s", receivedErrors[0].Collection)
+		}
+		if len(receivedErrors) > 0 && receivedErrors[0].Operation != "insert_one" {
+			t.Errorf("expected operation 'insert_one', got %s", receivedErrors[0].Operation)
+		}
+		mu.Unlock()
+	})
+
+	t.Run("ErrorStats_TracksErrors", func(t *testing.T) {
+		asyncDB := client.AsyncDatabase(ctx, dbName+"_stats_test", 1, slog.Default())
+		asyncDB.ResetErrorStats() // Clear any previous stats
+
+		coll := asyncDB.AsyncCollection("stats_test")
+
+		// Trigger a not found error via update
+		coll.UpdateOne("q1", "t1", mongox.M{"id": "nonexistent"}, mongox.M{mongox.Set: mongox.M{"name": "test"}})
+		time.Sleep(500 * time.Millisecond)
+
+		stats := asyncDB.ErrorStats()
+		if stats.TotalErrors < 1 {
+			t.Errorf("expected at least 1 error, got %d", stats.TotalErrors)
+		}
+		if stats.NonRetryableErrors < 1 {
+			t.Errorf("expected at least 1 non-retryable error, got %d", stats.NonRetryableErrors)
+		}
+
+		// Check operation stats
+		updateStats, ok := stats.ByOperation["update_one"]
+		if !ok {
+			t.Error("expected update_one in ByOperation")
+		} else if updateStats.Total < 1 {
+			t.Errorf("expected at least 1 update_one error, got %d", updateStats.Total)
+		}
+	})
+
+	// Note: HandleRetryError tests removed as they test an unexported method.
+	// The error handling behavior is tested indirectly through ErrorHandler_ReceivesErrors.
+
+	t.Run("ErrorStats_Reset", func(t *testing.T) {
+		asyncDB := client.AsyncDatabase(ctx, dbName+"_reset_test", 1, slog.Default())
+
+		// Add some errors
+		coll := asyncDB.AsyncCollection("reset_test")
+		coll.UpdateOne("q1", "t1", mongox.M{"id": "nonexistent"}, mongox.M{mongox.Set: mongox.M{"name": "test"}})
+		time.Sleep(500 * time.Millisecond)
+
+		stats := asyncDB.ErrorStats()
+		if stats.TotalErrors == 0 {
+			t.Error("expected some errors before reset")
+		}
+
+		asyncDB.ResetErrorStats()
+
+		stats = asyncDB.ErrorStats()
+		if stats.TotalErrors != 0 {
+			t.Errorf("expected 0 errors after reset, got %d", stats.TotalErrors)
+		}
+	})
+
+	t.Run("WithErrorHandler_Replaces", func(t *testing.T) {
+		asyncDB := client.AsyncDatabase(ctx, dbName+"_handler_test", 1, slog.Default())
+
+		var handlerCalled bool
+
+		handler := func(err *mongox.AsyncError) {
+			handlerCalled = true
+		}
+
+		// WithErrorHandler returns *AsyncDatabase for chaining
+		result := asyncDB.WithErrorHandler(handler)
+		if result != asyncDB {
+			t.Error("WithErrorHandler should return the same AsyncDatabase")
+		}
+
+		// We can't test the actual error handling without triggering real errors
+		// Just verify the method works without panicking
+		_ = handlerCalled
+	})
+
+	t.Run("QueueCollection_Methods", func(t *testing.T) {
+		asyncDB := client.AsyncDatabase(ctx, dbName+"_queue_test", 1, slog.Default())
+		asyncColl := asyncDB.AsyncCollection("queue_coll_test")
+		queueColl := asyncColl.QueueCollection("test_queue")
+
+		// Test Name
+		if queueColl.Name() != "queue_coll_test" {
+			t.Errorf("Name() = %s, want 'queue_coll_test'", queueColl.Name())
+		}
+
+		// Test Queue
+		if queueColl.Queue() != "test_queue" {
+			t.Errorf("Queue() = %s, want 'test_queue'", queueColl.Queue())
+		}
+
+		// Test Collection (returns underlying mongo collection)
+		if queueColl.Collection() == nil {
+			t.Error("Collection() should not be nil")
+		}
+
+		// Test InsertOne
+		entity := newTestEntity("q1")
+		queueColl.InsertOne(entity)
+		time.Sleep(200 * time.Millisecond)
+
+		// Test InsertStrict
+		queueColl.InsertStrict(newTestEntity("q2"))
+		time.Sleep(200 * time.Millisecond)
+
+		// Test QueuesLength
+		lengths := queueColl.QueuesLength()
+		if lengths == nil {
+			t.Error("QueuesLength() should not be nil")
+		}
+
+		// Test QueueLength
+		_ = queueColl.QueueLength("test_queue")
+	})
+
+	t.Run("AsyncCollection_Methods", func(t *testing.T) {
+		asyncDB := client.AsyncDatabase(ctx, dbName+"_async_methods", 1, slog.Default())
+		asyncColl := asyncDB.AsyncCollection("async_methods_test")
+
+		// Test Collection() returns underlying mongo collection
+		if asyncColl.Collection() == nil {
+			t.Error("Collection() should not be nil")
+		}
+
+		// Test InsertStrict
+		entity := newTestEntity("strict1")
+		asyncColl.InsertStrict("q", "t", entity)
+		time.Sleep(200 * time.Millisecond)
+
+		// Test QueuesLength
+		lengths := asyncColl.QueuesLength()
+		if lengths == nil {
+			t.Error("QueuesLength() should not be nil")
+		}
+
+		// Test QueueLength
+		_ = asyncColl.QueueLength("q")
+	})
+
+	t.Run("AsyncDatabase_WithTaskDefaults", func(t *testing.T) {
+		asyncDB := client.AsyncDatabase(ctx, dbName+"_task_defaults", 1, slog.Default())
+
+		// Test WithTask with empty queue key and task name (uses defaults)
+		done := make(chan bool)
+		asyncDB.WithTask("", "", func(ctx context.Context) error {
+			done <- true
+			return nil
+		})
+
+		select {
+		case <-done:
+			// Success
+		case <-time.After(2 * time.Second):
+			t.Error("WithTask should have completed")
+		}
 	})
 }
 
@@ -2947,5 +3152,145 @@ func TestInsertMethods(t *testing.T) {
 	_, err := coll.DeleteMany(ctx, nil)
 	if err != nil && !errors.Is(err, mongox.ErrNotFound) {
 		t.Error(err)
+	}
+}
+
+func TestGenericName(t *testing.T) {
+	db := client.Database(dbName)
+	coll := db.Collection("name_test_collection")
+
+	// Test the generic Name function
+	name := mongox.Name(coll)
+	if name != "name_test_collection" {
+		t.Errorf("expected 'name_test_collection', got '%s'", name)
+	}
+}
+
+func TestGenericInsertMany(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	db := client.Database(dbName)
+	coll := db.Collection("insert_many_generic_test")
+
+	// Test generic InsertMany
+	entities := []any{
+		newTestEntity("many1"),
+		newTestEntity("many2"),
+		newTestEntity("many3"),
+	}
+
+	ids, err := mongox.InsertMany(ctx, coll, entities)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ids) != 3 {
+		t.Errorf("expected 3 IDs, got %d", len(ids))
+	}
+
+	// Verify documents were inserted
+	count, err := coll.Count(ctx, mongox.M{"id": mongox.M{mongox.In: []string{"many1", "many2", "many3"}}})
+	if err != nil {
+		t.Error(err)
+	}
+	if count != 3 {
+		t.Errorf("expected 3 documents, got %d", count)
+	}
+
+	// Cleanup
+	_, _ = coll.DeleteMany(ctx, nil)
+}
+
+func TestMString(t *testing.T) {
+	// Test the M.String() method
+	filter := mongox.M{"name": "test", "value": 123}
+	str := filter.String()
+
+	// The string should be a valid BSON representation
+	if str == "" {
+		t.Error("expected non-empty string")
+	}
+
+	// Should contain the keys
+	if !strings.Contains(str, "name") || !strings.Contains(str, "test") {
+		t.Error("string should contain filter keys and values")
+	}
+}
+
+func TestClientDisconnect(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Create a new separate client for this test
+	cfg := mongox.Config{
+		Address: "localhost:27017",
+		Connection: &mongox.ConnectionConfig{
+			ConnectTimeout: lang.Ptr(2 * time.Second),
+		},
+	}
+
+	testClient, err := mongox.Connect(ctx, cfg)
+	if err != nil {
+		t.Skip("Could not connect to MongoDB for disconnect test")
+	}
+
+	// Test Disconnect
+	err = testClient.Disconnect(ctx)
+	if err != nil {
+		t.Errorf("Disconnect should not return error: %v", err)
+	}
+}
+
+func TestStartRetryExhaustedMonitor(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	asyncDB := client.AsyncDatabase(ctx, dbName, 2, slog.Default())
+
+	var handlerCalled bool
+	var mu sync.Mutex
+
+	asyncDB.WithErrorHandler(func(err *mongox.AsyncError) {
+		mu.Lock()
+		defer mu.Unlock()
+		// IsNotRetryable=false means retry exhausted
+		if !err.IsNotRetryable {
+			handlerCalled = true
+		}
+	})
+
+	// Start the monitor with a short interval
+	monitorCtx, monitorCancel := context.WithCancel(ctx)
+	asyncDB.StartRetryExhaustedMonitor(monitorCtx, 50*time.Millisecond)
+
+	// Wait a bit to let the monitor run a few cycles
+	time.Sleep(200 * time.Millisecond)
+
+	// Cancel the monitor
+	monitorCancel()
+
+	// Give it time to stop
+	time.Sleep(100 * time.Millisecond)
+
+	// The test verifies that the monitor starts and stops without panicking
+	// We don't expect handlerCalled to be true since we haven't created a broken queue
+	_ = handlerCalled
+	t.Log("StartRetryExhaustedMonitor ran successfully")
+}
+
+func TestClientIsTLSWithConnectedClient(t *testing.T) {
+	// Test IsTLS and IsTLSConnection with the real connected client
+	// The test client doesn't use TLS, so this should return false
+
+	// Test IsTLS method
+	isTLS := client.IsTLS()
+	if isTLS {
+		t.Error("Test client should not be using TLS")
+	}
+
+	// Test IsTLSConnection function directly
+	isTLSConn := mongox.IsTLSConnection(client)
+	if isTLSConn {
+		t.Error("IsTLSConnection should return false for non-TLS client")
 	}
 }

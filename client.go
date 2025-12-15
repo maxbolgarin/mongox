@@ -138,6 +138,7 @@ func (m *Client) AsyncDatabase(ctx context.Context, name string, workers int, lo
 		}),
 		log:   logger,
 		colls: make(map[string]*AsyncCollection),
+		stats: newAsyncErrorStats(),
 	}
 
 	m.mu.Lock()

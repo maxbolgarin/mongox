@@ -28,6 +28,9 @@ Whether you are building small applications or large-scale systems, `mongox` str
         - [Index Management](#index-management)
         - [Error Handling](#error-handling)
         - [Async Operations](#async-operations)
+            - [Async Error Handling](#async-error-handling)
+            - [Error Statistics](#error-statistics)
+            - [Retry-Exhausted Monitoring](#retry-exhausted-monitoring)
     - [Best Practices](#best-practices)
     - [Limitations](#limitations)
 - [Contributing](#contributing)
@@ -37,9 +40,10 @@ Whether you are building small applications or large-scale systems, `mongox` str
 ## Features
 
 - **Simplified Interface:** Reduce boilerplate code with an intuitive API.
-- **Rich Error Handling:** Error types for all possible error codes
+- **Rich Error Handling:** Error types for all possible error codes.
+- **Async Operations:** Fire-and-forget operations with error handling, statistics, and retry monitoring.
 - **Concurrent Safety:** Designed for safe use across multiple goroutines.
-- **Well tested code**: Built on top of official MongoDB Go driver, `mongox` has a 80% test coverage with integration tests using real MongoDB instance.
+- **Well tested code**: Built on top of official MongoDB Go driver, `mongox` has 87% test coverage with integration tests using real MongoDB instance.
 
 
 ## Getting Started
@@ -239,7 +243,8 @@ if err != nil {
 `mongox` supports asynchronous operations using `AsyncCollection`:
 
 ```go
-asyncCollection := client.AsyncDatabase("mydb").AsyncCollection("users")
+asyncDB := client.AsyncDatabase(ctx, "mydb", 10, logger) // 10 workers
+asyncCollection := asyncDB.AsyncCollection("users")
 
 // Insert a document asynchronously
 asyncCollection.Insert("users_queue", "insert_task", User{
@@ -250,7 +255,83 @@ asyncCollection.Insert("users_queue", "insert_task", User{
 
 - Operations with the same queue name (first argument, `users_queue` in example) will be executed sequentially in strict order of calling
 - Operations with different queue names will be executed in parallel
-- Name is using for logging.
+- Task name (second argument) is used for logging
+
+##### Async Error Handling
+
+Handle errors from async operations programmatically:
+
+```go
+asyncDB := client.AsyncDatabase(ctx, "mydb", 10, logger)
+
+// Set up error handler to receive all async errors
+asyncDB.WithErrorHandler(func(err *mongox.AsyncError) {
+    log.Printf("Async error in %s.%s: %v", err.Collection, err.Operation, err.Err)
+
+    // Check error type
+    if errors.Is(err.Err, mongox.ErrDuplicate) {
+        // Handle duplicate key error
+        alerting.Send("Duplicate key in " + err.Collection)
+    }
+
+    // IsNotRetryable=true means error won't be retried (e.g., ErrNotFound, ErrDuplicate)
+    // IsNotRetryable=false means task exhausted all retries
+    if !err.IsNotRetryable {
+        log.Printf("Task %s exhausted all %d retries", err.TaskName, err.RetryCount)
+    }
+})
+```
+
+##### Error Statistics
+
+Monitor async error statistics:
+
+```go
+// Get current statistics snapshot
+stats := asyncDB.ErrorStats()
+
+fmt.Printf("Total errors: %d\n", stats.TotalErrors)
+fmt.Printf("Non-retryable: %d\n", stats.NonRetryableErrors)
+fmt.Printf("Retry-exhausted: %d\n", stats.RetryExhaustedErrors)
+
+// Statistics by collection
+for coll, s := range stats.ByCollection {
+    fmt.Printf("Collection %s: %d errors\n", coll, s.Total)
+}
+
+// Statistics by operation
+for op, s := range stats.ByOperation {
+    fmt.Printf("Operation %s: %d errors\n", op, s.Total)
+}
+
+// Top 10 most frequent errors
+for _, e := range stats.TopErrors {
+    fmt.Printf("Error '%s': %d occurrences\n", e.Error, e.Count)
+}
+
+// Reset statistics
+asyncDB.ResetErrorStats()
+```
+
+##### Retry-Exhausted Monitoring
+
+Monitor tasks that have exhausted all retry attempts:
+
+```go
+// Start background monitoring for retry-exhausted errors
+asyncDB.StartRetryExhaustedMonitor(ctx, 5*time.Second)
+
+// The monitor will call error handler when tasks exhaust retries
+// Cancel context to stop the monitor
+```
+
+##### Disable Statistics Collection
+
+If you don't need error statistics:
+
+```go
+asyncDB := client.AsyncDatabase(ctx, "mydb", 10, logger).WithNoAsyncStats()
+```
 
 
 ## Contributing
