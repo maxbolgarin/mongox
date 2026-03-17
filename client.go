@@ -134,6 +134,10 @@ func (m *Client) AsyncDatabase(ctx context.Context, name string, workers int, lo
 		return adb
 	}
 
+	// Get or create the database before acquiring the write lock to avoid
+	// deadlock (Database also acquires m.mu).
+	db := m.Database(name)
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -143,7 +147,7 @@ func (m *Client) AsyncDatabase(ctx context.Context, name string, workers int, lo
 	}
 
 	adb = &AsyncDatabase{
-		db: m.Database(name),
+		db: db,
 		queue: gorder.New[string](ctx, gorder.Options{
 			Workers: workers,
 			Logger:  logger,
