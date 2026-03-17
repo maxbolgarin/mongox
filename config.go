@@ -204,13 +204,13 @@ type BSONOptions struct {
 	// instead of a primitive.Binary.
 	BinaryAsSlice bool `yaml:"binary_as_slice" json:"binary_as_slice"`
 
-	// DefaultDocumentD causes the driver to always unmarshal documents into the
-	// primitive.D type. This behavior is restricted to data typed as
-	// "interface{}" or "map[string]interface{}".
+	// Deprecated: DefaultDocumentD is no longer supported in mongo driver v2.
+	// Documents are always decoded into bson.D by default.
+	// This field is kept for backwards compatibility but has no effect.
 	DefaultDocumentD bool `yaml:"default_document_d" json:"default_document_d"`
 
 	// DefaultDocumentM causes the driver to always unmarshal documents into the
-	// primitive.M type. This behavior is restricted to data typed as
+	// bson.M type. This behavior is restricted to data typed as
 	// "interface{}" or "map[string]interface{}".
 	DefaultDocumentM bool `yaml:"default_document_m" json:"default_document_m"`
 

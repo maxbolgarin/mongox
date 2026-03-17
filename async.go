@@ -115,6 +115,14 @@ func (m *AsyncDatabase) AsyncCollection(name string) *AsyncCollection {
 		return coll
 	}
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Double-check after acquiring write lock to avoid duplicate creation.
+	if coll, ok = m.colls[name]; ok {
+		return coll
+	}
+
 	coll = &AsyncCollection{
 		coll:         m.db.Collection(name),
 		queue:        m.queue,
@@ -122,10 +130,7 @@ func (m *AsyncDatabase) AsyncCollection(name string) *AsyncCollection {
 		errorHandler: &m.errorHandler,
 		stats:        m.stats,
 	}
-
-	m.mu.Lock()
 	m.colls[name] = coll
-	m.mu.Unlock()
 
 	return coll
 }
@@ -188,6 +193,12 @@ func (m *AsyncDatabase) WithNoAsyncStats() *AsyncDatabase {
 	defer m.mu.Unlock()
 
 	m.stats = nil
+
+	// Update existing collections to stop recording stats.
+	for _, coll := range m.colls {
+		coll.stats = nil
+	}
+
 	return m
 }
 

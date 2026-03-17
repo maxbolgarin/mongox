@@ -33,15 +33,20 @@ func (m *Database) Collection(name string) *Collection {
 		return coll
 	}
 
-	db := &Collection{
-		coll: m.db.Collection(name),
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Double-check after acquiring write lock to avoid duplicate creation.
+	if coll, ok = m.colls[name]; ok {
+		return coll
 	}
 
-	m.mu.Lock()
-	m.colls[name] = db
-	m.mu.Unlock()
+	coll = &Collection{
+		coll: m.db.Collection(name),
+	}
+	m.colls[name] = coll
 
-	return db
+	return coll
 }
 
 // WithTransaction executes a transaction.
@@ -58,7 +63,7 @@ func (m *Database) WithTransaction(ctx context.Context, fn func(context.Context)
 	// It commits the transaction.
 	result, err := session.WithTransaction(ctx, fn)
 	if err != nil {
-		return nil, err
+		return nil, HandleMongoError(err)
 	}
 
 	return result, nil
