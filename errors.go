@@ -406,6 +406,20 @@ var errorMap = map[int32]error{
 	42:    ErrLogWriteFailed,
 	43:    ErrCursorNotFound,
 	44:    ErrDuplicateKey,
+	45:    ErrUserDataInconsistent,
+	46:    ErrLockBusy,
+	47:    ErrNoMatchingDocument,
+	48:    ErrNamespaceExists,
+	49:    ErrInvalidRoleModification,
+	50:    ErrMaxTimeMSExpired,
+	51:    ErrManualInterventionRequired,
+	52:    ErrDollarPrefixedFieldName,
+	53:    ErrInvalidIdField,
+	54:    ErrNotSingleValueField,
+	55:    ErrInvalidDBRef,
+	56:    ErrEmptyFieldName,
+	57:    ErrDottedFieldName,
+	58:    ErrRoleModificationFailed,
 	59:    ErrCommandNotFound,
 	61:    ErrShardKeyNotFound,
 	62:    ErrOplogOperationUnsupported,
@@ -804,6 +818,14 @@ func HandleMongoError(err error) error {
 				continue
 			}
 			errs = append(errs, fmt.Errorf("%w: %v", errFromCode, we))
+		}
+		if we := bwe.WriteConcernError; we != nil {
+			errFromCode, ok := ErrorFromCode(int32(we.Code))
+			if !ok {
+				errs = append(errs, we)
+			} else {
+				errs = append(errs, fmt.Errorf("%w: %v", errFromCode, we))
+			}
 		}
 		return errors.Join(errs...)
 	}

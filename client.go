@@ -108,14 +108,19 @@ func (m *Client) Database(name string) *Database {
 		return db
 	}
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Double-check after acquiring write lock to avoid duplicate creation.
+	if db, ok = m.dbs[name]; ok {
+		return db
+	}
+
 	db = &Database{
 		db:    m.client.Database(name),
 		colls: make(map[string]*Collection),
 	}
-
-	m.mu.Lock()
 	m.dbs[name] = db
-	m.mu.Unlock()
 
 	return db
 }
@@ -126,6 +131,14 @@ func (m *Client) AsyncDatabase(ctx context.Context, name string, workers int, lo
 	m.mu.RUnlock()
 
 	if ok {
+		return adb
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Double-check after acquiring write lock to avoid duplicate creation.
+	if adb, ok = m.adbs[name]; ok {
 		return adb
 	}
 
@@ -140,10 +153,7 @@ func (m *Client) AsyncDatabase(ctx context.Context, name string, workers int, lo
 		colls: make(map[string]*AsyncCollection),
 		stats: newAsyncErrorStats(),
 	}
-
-	m.mu.Lock()
 	m.adbs[name] = adb
-	m.mu.Unlock()
 
 	return adb
 }

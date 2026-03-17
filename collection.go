@@ -292,7 +292,10 @@ func (m *Collection) Upsert(ctx context.Context, record any, filter M) (*bson.Ob
 			return nil, ErrNotFound
 		}
 		if upd.UpsertedID != nil {
-			id := upd.UpsertedID.(bson.ObjectID)
+			id, ok := upd.UpsertedID.(bson.ObjectID)
+			if !ok {
+				return nil, fmt.Errorf("%w: expected ObjectID, got %T, %v", ErrInvalidArgument, upd.UpsertedID, upd.UpsertedID)
+			}
 			return &id, nil
 		}
 	}
