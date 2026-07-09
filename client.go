@@ -64,6 +64,8 @@ func Connect(ctx context.Context, cfg Config) (*Client, error) {
 	}
 
 	if err := client.Ping(ctx, nil); err != nil {
+		// Release the pool and monitor goroutines created by Connect.
+		_ = client.Disconnect(context.WithoutCancel(ctx))
 		return nil, err
 	}
 
