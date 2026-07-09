@@ -92,6 +92,19 @@ func TestBuildURLWithTLS(t *testing.T) {
 			expected: "mongodb://localhost:27017/?tls=true&tlsCertificateKeyFile=/path/to/certkey.pem&tlsCertificateKeyFilePassword=password123",
 		},
 		{
+			name: "TLS with special characters in paths",
+			config: mongox.Config{
+				Address: "localhost:27017",
+				Connection: &mongox.ConnectionConfig{
+					TLS: &mongox.TLSConfig{
+						CAFilePath:         "/path/with space/ca&extra.pem",
+						PrivateKeyPassword: "p@ss&word=1+2",
+					},
+				},
+			},
+			expected: "mongodb://localhost:27017/?tls=true&tlsCAFile=/path/with+space/ca%26extra.pem&tlsCertificateKeyFilePassword=p%40ss%26word%3D1%2B2",
+		},
+		{
 			name: "TLS with Multiple Hosts",
 			config: mongox.Config{
 				Hosts: []string{"host1:27017", "host2:27017", "host3:27017"},

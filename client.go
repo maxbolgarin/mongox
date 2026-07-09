@@ -3,6 +3,7 @@ package mongox
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -194,23 +195,29 @@ func buildURL(cfg Config) string {
 			out.WriteString("&tlsInsecure=true")
 		}
 		if cfg.Connection.TLS.CAFilePath != "" {
-			out.WriteString("&tlsCAFile=" + cfg.Connection.TLS.CAFilePath)
+			out.WriteString("&tlsCAFile=" + escapeURIParam(cfg.Connection.TLS.CAFilePath))
 		}
 		if cfg.Connection.TLS.CertificateKeyFilePath != "" {
-			out.WriteString("&tlsCertificateKeyFile=" + cfg.Connection.TLS.CertificateKeyFilePath)
+			out.WriteString("&tlsCertificateKeyFile=" + escapeURIParam(cfg.Connection.TLS.CertificateKeyFilePath))
 		}
 		if cfg.Connection.TLS.CertificateFilePath != "" {
-			out.WriteString("&tlsCertificateFile=" + cfg.Connection.TLS.CertificateFilePath)
+			out.WriteString("&tlsCertificateFile=" + escapeURIParam(cfg.Connection.TLS.CertificateFilePath))
 		}
 		if cfg.Connection.TLS.PrivateKeyFilePath != "" {
-			out.WriteString("&tlsPrivateKey=" + cfg.Connection.TLS.PrivateKeyFilePath)
+			out.WriteString("&tlsPrivateKey=" + escapeURIParam(cfg.Connection.TLS.PrivateKeyFilePath))
 		}
 		if cfg.Connection.TLS.PrivateKeyPassword != "" {
-			out.WriteString("&tlsCertificateKeyFilePassword=" + cfg.Connection.TLS.PrivateKeyPassword)
+			out.WriteString("&tlsCertificateKeyFilePassword=" + escapeURIParam(cfg.Connection.TLS.PrivateKeyPassword))
 		}
 	}
 
 	return out.String()
+}
+
+// escapeURIParam escapes a connection string query parameter value.
+// Slashes are kept readable: they are valid in query values and common in file paths.
+func escapeURIParam(v string) string {
+	return strings.ReplaceAll(url.QueryEscape(v), "%2F", "/")
 }
 
 func buildCredential(cfg Config) options.Credential {
