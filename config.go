@@ -72,7 +72,7 @@ type ConnectionConfig struct {
 
 	// TLS contains TLS configuration for creating MongoDB client.
 	// Provided TLS configuration means client will use TLS connection.
-	TLS *TLSConfig `yaml:"tls" json:"tls" env:"MONGO_TLS"`
+	TLS *TLSConfig `yaml:"tls" json:"tls"`
 }
 
 // TLSConfig contains TLS configuration for creating MongoDB client.
@@ -93,17 +93,18 @@ type TLSConfig struct {
 	// This is optional and used for authentication with MONGODB-X509.
 	CertificateFilePath string `yaml:"certificate_file_path" json:"certificate_file_path" env:"MONGO_CERTIFICATE_FILE_PATH"`
 
-	// CertificateKeyFilePath is the path to the client private key file.
+	// PrivateKeyFilePath is the path to the client private key file.
 	// This is optional and used for authentication with MONGODB-X509.
 	PrivateKeyFilePath string `yaml:"private_key_file_path" json:"private_key_file_path" env:"MONGO_PRIVATE_KEY_FILE_PATH"`
 
-	// CertificateKeyPassword is the password to the client certificate file or the client private key file.
+	// PrivateKeyPassword is the password to the client certificate file or the client private key file.
 	// This is optional and used for authentication with MONGODB-X509.
 	PrivateKeyPassword string `yaml:"certificate_key_password" json:"certificate_key_password" env:"MONGO_CERTIFICATE_KEY_PASSWORD"`
 
 	// TLSConfig is the TLS configuration for the client connection.
 	// If it is provided, it will override all other TLS configuration.
-	TLSConfig *tls.Config `yaml:"tls_config" json:"tls_config" env:"MONGO_TLS_CONFIG"`
+	// It cannot be set from a config file or environment variable.
+	TLSConfig *tls.Config `yaml:"-" json:"-"`
 }
 
 // AuthConfig contains authentication configuration for creating MongoDB client.
