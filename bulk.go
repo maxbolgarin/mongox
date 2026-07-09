@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/maxbolgarin/lang"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -21,11 +19,13 @@ func NewBulkBuilder() *BulkBuilder {
 	return &BulkBuilder{}
 }
 
-// Models returns the list of models added to the builder.
+// Models returns a copy of the list of models added to the builder.
 func (b *BulkBuilder) Models() []mongo.WriteModel {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.models
+	out := make([]mongo.WriteModel, len(b.models))
+	copy(out, b.models)
+	return out
 }
 
 // Insert adds [mongo.InsertOneModel] to the [BulkBuilder] for every record in the variadic argument.
@@ -57,9 +57,13 @@ func (b *BulkBuilder) ReplaceOne(record any, filter M) {
 
 // SetFields adds [mongo.UpdateOneModel] to the [BulkBuilder] for update with filter.
 // For example: {key1: value1, key2: value2} becomes {$set: {key1: value1, key2: value2}}.
+// A nil or empty update is a no-op: no model is added,
+// because an empty update document would fail the whole bulk write on the server.
 func (b *BulkBuilder) SetFields(filter, update M) {
-	m := mongo.NewUpdateOneModel().SetFilter(filter.Prepare()).
-		SetUpdate(lang.If(update != nil, prepareUpdates(update, Set), bson.D{}))
+	if len(update) == 0 {
+		return
+	}
+	m := mongo.NewUpdateOneModel().SetFilter(filter.Prepare()).SetUpdate(prepareUpdates(update, Set))
 	b.addModel(m)
 }
 
