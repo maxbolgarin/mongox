@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -702,12 +701,8 @@ var errorMap = map[int32]error{
 	46841: ErrClientMarkedKilled,
 }
 
-var mu sync.RWMutex
-
 // ErrorFromCode returns an error variable from a MongoDB error code.
 func ErrorFromCode(code int32) (error, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
 	err, ok := errorMap[code]
 	return err, ok
 }
