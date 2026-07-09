@@ -795,6 +795,10 @@ func HandleMongoError(err error) error {
 				errs = append(errs, fmt.Errorf("%w: %v", errFromCode, we))
 			}
 		}
+		if len(errs) == 0 {
+			// Do not turn an exception without write errors into a nil error.
+			return err
+		}
 		return errors.Join(errs...)
 	}
 
@@ -826,6 +830,10 @@ func HandleMongoError(err error) error {
 			} else {
 				errs = append(errs, fmt.Errorf("%w: %v", errFromCode, we))
 			}
+		}
+		if len(errs) == 0 {
+			// Do not turn an exception without write errors into a nil error.
+			return err
 		}
 		return errors.Join(errs...)
 	}
