@@ -3278,6 +3278,73 @@ func TestStartRetryExhaustedMonitor(t *testing.T) {
 	t.Log("StartRetryExhaustedMonitor ran successfully")
 }
 
+func TestUpsertWithCustomStringID(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	coll := client.Database(dbName).Collection("upsert_custom_id")
+	defer func() { _, _ = coll.DeleteMany(ctx, nil) }()
+
+	type customDoc struct {
+		ID   string `bson:"_id"`
+		Name string `bson:"name"`
+	}
+
+	// Upsert-insert with a user-provided string _id must not panic (regression test).
+	id, err := coll.Upsert(ctx, customDoc{ID: "my-custom-id", Name: "first"}, mongox.M{"_id": "my-custom-id"})
+	if err != nil {
+		t.Fatalf("upsert with custom string _id: %v", err)
+	}
+	if id != nil {
+		t.Errorf("expected nil returned ID for custom string _id, got %v", id)
+	}
+
+	// Upsert-update of the existing document.
+	id, err = coll.Upsert(ctx, customDoc{ID: "my-custom-id", Name: "second"}, mongox.M{"_id": "my-custom-id"})
+	if err != nil {
+		t.Fatalf("upsert update with custom string _id: %v", err)
+	}
+	if id != nil {
+		t.Errorf("expected nil returned ID for updated document, got %v", id)
+	}
+
+	var got customDoc
+	if err := coll.FindOne(ctx, &got, mongox.M{"_id": "my-custom-id"}); err != nil {
+		t.Fatalf("find upserted document: %v", err)
+	}
+	if got.Name != "second" {
+		t.Errorf("expected name 'second', got %q", got.Name)
+	}
+}
+
+func TestFindByIDType(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	coll := client.Database(dbName).Collection("id_type_filter")
+	defer func() { _, _ = coll.DeleteMany(ctx, nil) }()
+
+	oid, err := coll.InsertOne(ctx, mongox.M{"name": "id-test"})
+	if err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+
+	// Filtering by the mongox.ID type must match the ObjectID _id (regression test).
+	var result struct {
+		ID   mongox.ID `bson:"_id"`
+		Name string    `bson:"name"`
+	}
+	if err := coll.FindOne(ctx, &result, mongox.M{"_id": mongox.NewIDFromObjectID(oid)}); err != nil {
+		t.Fatalf("find by mongox.ID filter: %v", err)
+	}
+	if result.ID.ObjectID() != oid {
+		t.Errorf("decoded ID %v, want %v", result.ID, oid)
+	}
+	if result.Name != "id-test" {
+		t.Errorf("expected name 'id-test', got %q", result.Name)
+	}
+}
+
 func TestClientIsTLSWithConnectedClient(t *testing.T) {
 	// Test IsTLS and IsTLSConnection with the real connected client
 	// The test client doesn't use TLS, so this should return false
