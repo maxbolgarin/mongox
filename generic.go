@@ -131,8 +131,8 @@ func InsertStrict(ctx context.Context, coll *Collection, records ...any) (ids []
 // If isStrictID is true, it will return an error if the inserted ID is not an ObjectID.
 // If isStrictID is false and if inserted ID is not an ObjectID, it will be returned as empty bson.ObjectID.
 // If you provide your own ID, it is assumed you already know it, so it will not be returned.
-func InsertMany(ctx context.Context, coll *Collection, records []any) ([]bson.ObjectID, error) {
-	return coll.InsertMany(ctx, records)
+func InsertMany(ctx context.Context, coll *Collection, records []any, isStrictID ...bool) ([]bson.ObjectID, error) {
+	return coll.InsertMany(ctx, records, isStrictID...)
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.
