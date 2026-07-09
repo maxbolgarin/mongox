@@ -49,8 +49,46 @@ func (id ID) ObjectID() bson.ObjectID {
 	return bson.ObjectID(id)
 }
 
+// IsZero returns true if the ID is the zero value.
+func (id ID) IsZero() bool {
+	return bson.ObjectID(id).IsZero()
+}
+
+// MarshalBSONValue implements bson.ValueMarshaler.
+// Without it, ID would be encoded as a generic [12]byte array (BSON binary)
+// and would never match real ObjectID values in filters and documents.
+func (id ID) MarshalBSONValue() (byte, []byte, error) {
+	typ, data, err := bson.MarshalValue(bson.ObjectID(id))
+	return byte(typ), data, err
+}
+
+// UnmarshalBSONValue implements bson.ValueUnmarshaler.
+func (id *ID) UnmarshalBSONValue(typ byte, data []byte) error {
+	var oid bson.ObjectID
+	if err := bson.UnmarshalValue(bson.Type(typ), data, &oid); err != nil {
+		return err
+	}
+	*id = ID(oid)
+	return nil
+}
+
+// MarshalJSON returns the ID as a JSON string with hex representation.
+func (id ID) MarshalJSON() ([]byte, error) {
+	return bson.ObjectID(id).MarshalJSON()
+}
+
+// UnmarshalJSON parses the ID from a JSON string with hex representation.
+func (id *ID) UnmarshalJSON(data []byte) error {
+	var oid bson.ObjectID
+	if err := oid.UnmarshalJSON(data); err != nil {
+		return err
+	}
+	*id = ID(oid)
+	return nil
+}
+
 // NewM creates a new Filter based on pairs.
-// Pairs must be in the form NewF(key1, value1, key2, value2, ...)
+// Pairs must be in the form NewM(key1, value1, key2, value2, ...)
 func NewM(pairs ...any) M {
 	return newMapFromPairs(pairs...)
 }
