@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/maxbolgarin/gorder"
@@ -95,8 +96,10 @@ type AsyncDatabase struct {
 	colls map[string]*AsyncCollection
 	mu    sync.RWMutex
 
-	errorHandler AsyncErrorHandler
-	stats        *asyncErrorStats
+	// errorHandler and stats are shared with every AsyncCollection and are
+	// read from queue worker goroutines, so they must be accessed atomically.
+	errorHandler atomic.Pointer[AsyncErrorHandler]
+	stats        atomic.Pointer[asyncErrorStats]
 }
 
 // Database returns the underlying Database.
@@ -128,7 +131,7 @@ func (m *AsyncDatabase) AsyncCollection(name string) *AsyncCollection {
 		queue:        m.queue,
 		log:          m.log,
 		errorHandler: &m.errorHandler,
-		stats:        m.stats,
+		stats:        &m.stats,
 	}
 	m.colls[name] = coll
 
@@ -168,53 +171,40 @@ func (m *AsyncDatabase) WithTask(queueKey, taskName string, fn func(ctx context.
 	})
 }
 
-// SetErrorHandler sets a callback function for handling async errors.
+// WithErrorHandler sets a callback function for handling async errors.
 // The handler is called synchronously but should be non-blocking.
-// Returns the previous handler (nil if none was set).
+// Pass nil to remove the current handler.
 // It is thread-safe and can be called at any time.
 func (m *AsyncDatabase) WithErrorHandler(handler AsyncErrorHandler) *AsyncDatabase {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.errorHandler = handler
-
-	// Update existing collections to use the new handler
-	for _, coll := range m.colls {
-		coll.errorHandler = &m.errorHandler
+	if handler == nil {
+		m.errorHandler.Store(nil)
+	} else {
+		m.errorHandler.Store(&handler)
 	}
-
 	return m
 }
 
 // WithNoAsyncStats disables error statistics collection.
 // It is thread-safe and can be called at any time.
 func (m *AsyncDatabase) WithNoAsyncStats() *AsyncDatabase {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.stats = nil
-
-	// Update existing collections to stop recording stats.
-	for _, coll := range m.colls {
-		coll.stats = nil
-	}
-
+	m.stats.Store(nil)
 	return m
 }
 
 // ErrorStats returns a point-in-time snapshot of error statistics.
 // The snapshot is a copy and can be safely used without synchronization.
 func (m *AsyncDatabase) ErrorStats() AsyncErrorStats {
-	if m.stats == nil {
+	stats := m.stats.Load()
+	if stats == nil {
 		return AsyncErrorStats{}
 	}
-	return m.stats.snapshot()
+	return stats.snapshot()
 }
 
 // ResetErrorStats clears all error statistics.
 func (m *AsyncDatabase) ResetErrorStats() {
-	if m.stats != nil {
-		m.stats.reset()
+	if stats := m.stats.Load(); stats != nil {
+		stats.reset()
 	}
 }
 
@@ -282,17 +272,13 @@ func (m *AsyncDatabase) reportRetryExhausted(queueKey string, retryCount int) {
 	}
 
 	// Record statistics
-	if m.stats != nil {
-		m.stats.record(asyncErr)
+	if stats := m.stats.Load(); stats != nil {
+		stats.record(asyncErr)
 	}
 
 	// Call user handler
-	m.mu.RLock()
-	handler := m.errorHandler
-	m.mu.RUnlock()
-
-	if handler != nil {
-		handler(asyncErr)
+	if handler := m.errorHandler.Load(); handler != nil && *handler != nil {
+		(*handler)(asyncErr)
 	}
 }
 
@@ -304,8 +290,8 @@ type AsyncCollection struct {
 	queue *gorder.Gorder[string]
 	log   gorder.Logger
 
-	errorHandler *AsyncErrorHandler // Pointer to database's handler
-	stats        *asyncErrorStats   // Pointer to database's stats
+	errorHandler *atomic.Pointer[AsyncErrorHandler] // Shared with the database
+	stats        *atomic.Pointer[asyncErrorStats]   // Shared with the database
 }
 
 // Name returns the name of the collection.
@@ -574,13 +560,13 @@ func (ac *AsyncCollection) reportError(err error, taskName, opName, queueKey str
 	}
 
 	// Record statistics
-	if ac.stats != nil {
-		ac.stats.record(asyncErr)
+	if stats := ac.stats.Load(); stats != nil {
+		stats.record(asyncErr)
 	}
 
 	// Call user handler
-	if ac.errorHandler != nil && *ac.errorHandler != nil {
-		(*ac.errorHandler)(asyncErr)
+	if handler := ac.errorHandler.Load(); handler != nil && *handler != nil {
+		(*handler)(asyncErr)
 	}
 }
 

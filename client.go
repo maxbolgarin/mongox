@@ -157,8 +157,8 @@ func (m *Client) AsyncDatabase(ctx context.Context, name string, workers int, lo
 		}),
 		log:   logger,
 		colls: make(map[string]*AsyncCollection),
-		stats: newAsyncErrorStats(),
 	}
+	adb.stats.Store(newAsyncErrorStats())
 	m.adbs[name] = adb
 
 	return adb
