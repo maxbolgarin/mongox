@@ -128,6 +128,9 @@ func (m *Client) Database(name string) *Database {
 	return db
 }
 
+// AsyncDatabase returns a handle to an async database.
+// The instance is cached per name: ctx, workers and logger of subsequent calls
+// with the same name are ignored.
 func (m *Client) AsyncDatabase(ctx context.Context, name string, workers int, logger gorder.Logger) *AsyncDatabase {
 	m.mu.RLock()
 	adb, ok := m.adbs[name]

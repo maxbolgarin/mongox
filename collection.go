@@ -20,6 +20,8 @@ type FindOptions struct {
 	Skip int
 	// The order of the documents returned in the result set. Fields specified in the sort, must have an index.
 	// Sort has priority over SortMany.
+	// Sort must contain only ONE key: it is a map, so the order of multiple keys is undefined
+	// and the driver rejects it. Use SortMany for compound sorts.
 	// Example: mongox.M{"name": 1} - sort by name in ascending order.
 	Sort M
 	// The order of the documents returned in the result set. Fields specified in the sort, must have an index.
