@@ -278,7 +278,8 @@ func (m *Collection) InsertMany(ctx context.Context, records []any, isStrictID .
 }
 
 // Upsert replaces a document in the collection or inserts it if it doesn't exist.
-// It returns ID of the interserted document.
+// It returns ID of the inserted document.
+// If you provide your own non-ObjectID _id, it is assumed you already know it, so it will not be returned.
 // If existing document is updated (no new inserted), it returns nil ID and nil error.
 // If no document is updated, it returns nil ID and ErrNotFound.
 func (m *Collection) Upsert(ctx context.Context, record any, filter M) (*bson.ObjectID, error) {
@@ -292,11 +293,11 @@ func (m *Collection) Upsert(ctx context.Context, record any, filter M) (*bson.Ob
 			return nil, ErrNotFound
 		}
 		if upd.UpsertedID != nil {
-			id, ok := upd.UpsertedID.(bson.ObjectID)
-			if !ok {
-				return nil, fmt.Errorf("%w: expected ObjectID, got %T, %v", ErrInvalidArgument, upd.UpsertedID, upd.UpsertedID)
+			// A user-provided _id can be of any type (string, int, ...);
+			// it is returned only when it is a generated ObjectID.
+			if id, ok := upd.UpsertedID.(bson.ObjectID); ok {
+				return &id, nil
 			}
-			return &id, nil
 		}
 	}
 	return nil, nil
