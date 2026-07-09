@@ -140,6 +140,8 @@ func (m *AsyncDatabase) AsyncCollection(name string) *AsyncCollection {
 
 // WithTransaction executes a transaction asynchronously.
 // It will create a new session and execute a function inside a transaction.
+// It start retrying in case of error for DefaultAsyncRetries times.
+// It filters errors and won't retry in case of ErrNotFound, ErrDuplicate, ErrInvalidArgument and some other errors.
 // Warning! Transactions in MongoDB is available only for replica sets or Sharded Clusters, not for standalone servers.
 func (m *AsyncDatabase) WithTransaction(queueKey, taskName string, fn func(ctx context.Context) error) {
 	if queueKey == "" {
@@ -152,7 +154,9 @@ func (m *AsyncDatabase) WithTransaction(queueKey, taskName string, fn func(ctx c
 		_, err := m.db.WithTransaction(ctx, func(ctx context.Context) (any, error) {
 			return nil, fn(ctx)
 		})
-		return err
+		return filterAsyncRetryError(err, m.log, m.db.db.Name(), taskName, func(err error) {
+			m.reportError(err, "", "transaction", taskName, queueKey)
+		})
 	})
 }
 
@@ -256,6 +260,30 @@ func (m *AsyncDatabase) StartRetryExhaustedMonitor(ctx context.Context, interval
 			}
 		}
 	}()
+}
+
+// reportError sends a non-retryable error to the configured handler and records statistics.
+func (m *AsyncDatabase) reportError(err error, collection, opName, taskName, queueKey string) {
+	asyncErr := &AsyncError{
+		Err:            err,
+		Collection:     collection,
+		Operation:      opName,
+		TaskName:       taskName,
+		QueueKey:       queueKey,
+		Timestamp:      time.Now(),
+		RetryCount:     0,
+		IsNotRetryable: true,
+	}
+
+	// Record statistics
+	if stats := m.stats.Load(); stats != nil {
+		stats.record(asyncErr)
+	}
+
+	// Call user handler
+	if handler := m.errorHandler.Load(); handler != nil && *handler != nil {
+		(*handler)(asyncErr)
+	}
 }
 
 // reportRetryExhausted reports a retry-exhausted error.
@@ -512,6 +540,15 @@ func (ac *AsyncCollection) push(queueKey, taskName, opName string, f gorder.Task
 // Non-retryable errors are logged and reported to the error handler but not retried.
 // Retryable errors (network, timeout, server errors) are returned for retry by gorder.
 func (ac *AsyncCollection) handleRetryError(err error, taskName, opName, queueKey string) error {
+	return filterAsyncRetryError(err, ac.log, ac.coll.coll.Name(), taskName, func(err error) {
+		ac.reportError(err, taskName, opName, queueKey)
+	})
+}
+
+// filterAsyncRetryError processes errors from async operations, determining which should be retried.
+// Non-retryable errors are logged and passed to report, then swallowed (nil is returned).
+// Retryable errors (network, timeout, server errors) are returned for retry by gorder.
+func filterAsyncRetryError(err error, log gorder.Logger, scope, taskName string, report func(error)) error {
 	if err == nil {
 		return nil
 	}
@@ -519,14 +556,14 @@ func (ac *AsyncCollection) handleRetryError(err error, taskName, opName, queueKe
 	switch {
 	case errors.Is(err, ErrNotFound):
 		// ErrNotFound is read error, it doesn't change state of the document and it can be throwed
-		ac.log.Error("document not found", "error", err, "collection", ac.coll.coll.Name(), "task", taskName, "flow", "async")
-		ac.reportError(err, taskName, opName, queueKey)
+		log.Error("document not found", "error", err, "collection", scope, "task", taskName, "flow", "async")
+		report(err)
 		return nil
 
 	case errors.Is(err, ErrDuplicate):
 		// ErrDuplicate is a persistent error, there is no sense to retry it
-		ac.log.Error("duplicate", "error", err, "collection", ac.coll.coll.Name(), "task", taskName, "flow", "async")
-		ac.reportError(err, taskName, opName, queueKey)
+		log.Error("duplicate", "error", err, "collection", scope, "task", taskName, "flow", "async")
+		report(err)
 		return nil
 
 	case errors.Is(err, ErrInvalidArgument) ||
@@ -537,8 +574,8 @@ func (ac *AsyncCollection) handleRetryError(err error, taskName, opName, queueKe
 		errors.Is(err, ErrIllegalOperation):
 		// ErrInvalidArgument means error with using mongo interface
 		// It is a persistent error and there is no sense to retry
-		ac.log.Error("invalid argument", "error", err, "collection", ac.coll.coll.Name(), "task", taskName, "flow", "async")
-		ac.reportError(err, taskName, opName, queueKey)
+		log.Error("invalid argument", "error", err, "collection", scope, "task", taskName, "flow", "async")
+		report(err)
 		return nil
 
 	default: // network, timeout, server and other errors should be retried
