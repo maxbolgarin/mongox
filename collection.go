@@ -318,9 +318,13 @@ func (m *Collection) ReplaceOne(ctx context.Context, record any, filter M) error
 
 // SetFields sets fields in a document in the collection using updates map.
 // For example: {key1: value1, key2: value2} becomes {$set: {key1: value1, key2: value2}}.
+// It returns ErrInvalidArgument if update is nil or empty.
 // It returns ErrNotFound if no document is updated.
 func (m *Collection) SetFields(ctx context.Context, filter, update M) error {
-	return m.updateOne(ctx, filter.Prepare(), lang.If(update != nil, prepareUpdates(update, Set), bson.D{}))
+	if len(update) == 0 {
+		return fmt.Errorf("%w: empty update", ErrInvalidArgument)
+	}
+	return m.updateOne(ctx, filter.Prepare(), prepareUpdates(update, Set))
 }
 
 // UpdateOne updates a document in the collection.
